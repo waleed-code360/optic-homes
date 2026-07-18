@@ -1,33 +1,37 @@
-# Optic Homes — Live AI Virtual Try-On
+# Optic Homes — AI Virtual Try-On V2
 
-## What was added
+## Main fix
 
-- Live front-camera virtual eyewear try-on
-- Google MediaPipe AI face landmark tracking
-- Real-time tracking of eyes, nose, face width, head tilt and left/right turn
-- 3D-style frame depth, temples, lens tint, reflections and frame materials
-- Try On buttons on every product
-- Full-screen mobile-first try-on experience
-- Switch between all products without closing the camera
-- Frame size and vertical-fit adjustments
-- Camera switching
-- Try-on photo capture
-- Add to Cart directly from the try-on screen
-- Privacy notice: camera frames are processed in the browser
+The previous version started the camera and AI engine together with `Promise.all`.
+When the AI package failed to load, it incorrectly displayed a camera error even
+though the camera was already working.
+
+V2 starts the camera first and loads AI separately.
+
+## Improvements
+
+- Correct camera-vs-AI error handling
+- Uses the official current MediaPipe Tasks bundle
+- Pinned MediaPipe Tasks fallback
+- Backup CDN
+- Legacy MediaPipe Face Mesh fallback
+- Manual drag-and-resize fallback if every AI CDN fails
+- Camera remains visible while AI loads
+- More resilient camera constraints
+- Better loading states and exact error messages
+- AI engine status chip
+- Fit quality score
+- Recenter control
+- Improved mobile and desktop try-on UI
+- Smoother frame tracking and fitting
+- Photo capture and Add to Cart remain included
 
 ## Deploy
 
-Replace the old repository `index.html` with this one and keep `.nojekyll`
-in the repository root. GitHub Pages must use HTTPS for camera access.
+Replace the existing repository `index.html` with the new one in this folder.
+Keep `.nojekyll` in the repository root and commit the changes.
 
-## Internet requirement
+After GitHub Pages updates, hard refresh:
 
-The AI model and MediaPipe browser runtime are loaded from official Google
-model hosting and jsDelivr. The site therefore needs an internet connection
-when the virtual try-on is first opened.
-
-## Product assets
-
-The current catalogue uses demo frame designs. For final inventory, replace
-the demo products with real transparent product assets and exact frame
-measurements. The live tracking system will continue to work.
+- Windows/Chrome: `Ctrl + Shift + R`
+- Mobile Chrome: open the site in an Incognito tab once to bypass the old cache.

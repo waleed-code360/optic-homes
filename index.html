@@ -1175,6 +1175,169 @@ input[type="file"] {
   .tryon-frame-option img { width: 50px; height: 39px; }
 }
 
+
+/* ===== Optic Homes Virtual Try-On V2 ===== */
+.tryon-stage {
+  isolation: isolate;
+}
+.tryon-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,.18), transparent 20%, transparent 72%, rgba(0,0,0,.20)),
+    radial-gradient(circle at center, transparent 45%, rgba(0,0,0,.13));
+}
+#tryonVideo {
+  z-index: 0;
+  background: #101a15;
+}
+#tryonCanvas {
+  z-index: 2;
+  touch-action: none;
+  cursor: grab;
+}
+#tryonCanvas:active { cursor: grabbing; }
+
+.tryon-loading {
+  background: rgba(7,16,12,.84);
+  backdrop-filter: blur(8px);
+}
+.tryon-loading.camera-live {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  width: min(390px, calc(100% - 32px));
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 22px;
+  padding: 22px;
+  background: rgba(7,16,12,.78);
+  box-shadow: 0 20px 70px rgba(0,0,0,.3);
+}
+
+.tryon-fit-score {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  right: 14px;
+  min-width: 96px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 14px;
+  background: rgba(7,16,12,.68);
+  backdrop-filter: blur(12px);
+  display: grid;
+  text-align: right;
+}
+.tryon-fit-score span {
+  color: rgba(255,255,255,.65);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+.tryon-fit-score strong {
+  margin-top: 1px;
+  font-size: 15px;
+  color: white;
+}
+.tryon-fit-score.good strong { color: #72e39c; }
+.tryon-fit-score.medium strong { color: #f2cf72; }
+
+.tryon-mode-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+.tryon-mode-btn {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tryon-mode-btn.active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: white;
+}
+.tryon-engine-notice {
+  margin-top: 10px;
+  padding: 11px 12px;
+  border: 1px solid #dfcda4;
+  border-radius: 12px;
+  background: #fff7df;
+  display: grid;
+  gap: 2px;
+}
+.tryon-engine-notice[hidden] { display: none; }
+.tryon-engine-notice strong { font-size: 12px; }
+.tryon-engine-notice span {
+  color: #6f6247;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.tryon-ai-chip {
+  transition: background .2s ease, color .2s ease;
+}
+.tryon-ai-chip.ready {
+  background: #d8f1df;
+  color: #14572e;
+}
+.tryon-ai-chip.manual {
+  background: #fff0cc;
+  color: #76520b;
+}
+.tryon-ai-chip.loading {
+  background: #e9e4da;
+  color: #675f55;
+}
+
+.tryon-face-guide {
+  transition: opacity .25s ease, border-color .25s ease, transform .25s ease;
+}
+.tryon-face-guide.face-found {
+  opacity: .10;
+  border-color: rgba(114,227,156,.7);
+}
+.tryon-hint {
+  transition: opacity .2s ease;
+}
+.tryon-capture-btn {
+  position: relative;
+}
+.tryon-capture-btn::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
+@media (max-width: 640px) {
+  .tryon-fit-score {
+    top: 12px;
+    right: 12px;
+    min-width: 82px;
+    padding: 7px 9px;
+  }
+  .tryon-loading.camera-live {
+    width: calc(100% - 24px);
+  }
+  .tryon-mode-row {
+    margin-top: 10px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1612,7 +1775,7 @@ input[type="file"] {
       </header>
 
       <div class="tryon-stage" id="tryonStage">
-        <video id="tryonVideo" playsinline muted aria-label="Live camera preview"></video>
+        <video id="tryonVideo" playsinline muted autoplay aria-label="Live camera preview"></video>
         <canvas id="tryonCanvas" aria-label="Virtual glasses overlay"></canvas>
 
         <div class="tryon-loading" id="tryonLoading">
@@ -1630,6 +1793,11 @@ input[type="file"] {
           <span id="tryonStatus">Ready</span>
         </div>
 
+        <div class="tryon-fit-score" id="tryonFitScore">
+          <span>Fit quality</span>
+          <strong id="tryonFitValue">—</strong>
+        </div>
+
         <div class="tryon-hint" id="tryonHint">Keep your face inside the guide and look straight ahead.</div>
       </div>
 
@@ -1641,7 +1809,21 @@ input[type="file"] {
             <strong id="tryonProductName">Midnight Classic</strong>
             <b id="tryonProductPrice">PKR 3,200</b>
           </div>
-          <span class="tryon-ai-chip">AI FIT</span>
+          <span class="tryon-ai-chip" id="tryonEngineChip">AI STARTING</span>
+        </div>
+
+        <div class="tryon-mode-row">
+          <button class="tryon-mode-btn active" id="tryonAutoFit" type="button">
+            <span aria-hidden="true">✦</span> Auto AI Fit
+          </button>
+          <button class="tryon-mode-btn" id="tryonRecenter" type="button">
+            <span aria-hidden="true">⌖</span> Recenter
+          </button>
+        </div>
+
+        <div class="tryon-engine-notice" id="tryonEngineNotice" hidden>
+          <strong id="tryonEngineNoticeTitle">AI engine status</strong>
+          <span id="tryonEngineNoticeText"></span>
         </div>
 
         <div class="tryon-adjustments">
@@ -2066,10 +2248,37 @@ window.addEventListener("pageshow", function () {
 
 <script type="module">
 (() => {
-  const MP_VERSION = "0.10.22";
-  const MP_MODULE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/+esm`;
-  const MP_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`;
-  const MP_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+  const TASKS_ENGINES = [
+    {
+      name: "MediaPipe Tasks (current)",
+      module: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs",
+      wasm: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm"
+    },
+    {
+      name: "MediaPipe Tasks (pinned)",
+      module: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/vision_bundle.mjs",
+      wasm: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm"
+    },
+    {
+      name: "MediaPipe Tasks (backup CDN)",
+      module: "https://unpkg.com/@mediapipe/tasks-vision@0.10.22-rc.20250304/vision_bundle.mjs?module",
+      wasm: "https://unpkg.com/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm"
+    }
+  ];
+  const MP_MODELS = [
+    "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+    "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+  ];
+  const LEGACY_FACE_MESH = [
+    {
+      script: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js",
+      root: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619"
+    },
+    {
+      script: "https://unpkg.com/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js",
+      root: "https://unpkg.com/@mediapipe/face_mesh@0.4.1633559619"
+    }
+  ];
 
   const products = window.OPTIC_PRODUCTS || [];
   const modal = document.getElementById("tryonModal");
@@ -2095,6 +2304,14 @@ window.addEventListener("pageshow", function () {
   const productName = document.getElementById("tryonProductName");
   const productPrice = document.getElementById("tryonProductPrice");
   const productCategory = document.getElementById("tryonProductCategory");
+  const engineChip = document.getElementById("tryonEngineChip");
+  const engineNotice = document.getElementById("tryonEngineNotice");
+  const engineNoticeTitle = document.getElementById("tryonEngineNoticeTitle");
+  const engineNoticeText = document.getElementById("tryonEngineNoticeText");
+  const autoFitBtn = document.getElementById("tryonAutoFit");
+  const recenterBtn = document.getElementById("tryonRecenter");
+  const fitScore = document.getElementById("tryonFitScore");
+  const fitValue = document.getElementById("tryonFitValue");
 
   let FaceLandmarkerClass = null;
   let FilesetResolverClass = null;
@@ -2108,6 +2325,18 @@ window.addEventListener("pageshow", function () {
   let lastVideoTime = -1;
   let lastFaceAt = 0;
   let smooth = null;
+  let engineType = "none";
+  let engineName = "";
+  let legacyFaceMesh = null;
+  let legacyBusy = false;
+  let legacyLandmarks = null;
+  let legacyLastSendAt = 0;
+  let manualMode = false;
+  let manualTarget = null;
+  let draggingManual = false;
+  let dragOffset = { x: 0, y: 0 };
+  let cameraReady = false;
+  let startupToken = 0;
 
   const frameStyles = {
     1:  { frame: "#161a18", edge: "#5d625f", lens: "rgba(50,43,35,.28)", metal: false, thickness: 1.10 },
@@ -2150,10 +2379,98 @@ window.addEventListener("pageshow", function () {
     loading.hidden = true;
   }
 
+  function setCameraLiveLoading(enabled) {
+    loading.classList.toggle("camera-live", enabled);
+  }
+
+  function setEngineChip(label, mode = "loading") {
+    engineChip.textContent = label;
+    engineChip.classList.remove("ready", "manual", "loading");
+    engineChip.classList.add(mode);
+  }
+
+  function showEngineNotice(title, text) {
+    engineNoticeTitle.textContent = title;
+    engineNoticeText.textContent = text;
+    engineNotice.hidden = false;
+  }
+
+  function hideEngineNotice() {
+    engineNotice.hidden = true;
+  }
+
+  function updateFitScore(value = null) {
+    fitScore.classList.remove("good", "medium");
+    if (value == null) {
+      fitValue.textContent = "—";
+      return;
+    }
+    const score = Math.round(clamp(value, 0, 100));
+    fitValue.textContent = `${score}%`;
+    if (score >= 82) fitScore.classList.add("good");
+    else if (score >= 58) fitScore.classList.add("medium");
+  }
+
+  function withTimeout(promise, ms, label) {
+    let timer;
+    return Promise.race([
+      promise.finally(() => clearTimeout(timer)),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+      })
+    ]);
+  }
+
+  function loadClassicScript(url, timeout = 15000) {
+    return new Promise((resolve, reject) => {
+      const existing = [...document.scripts].find(script => script.src === url);
+      if (existing && window.FaceMesh) {
+        resolve();
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = url;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      const timer = setTimeout(() => {
+        script.remove();
+        reject(new Error(`Script timed out: ${url}`));
+      }, timeout);
+      script.onload = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      script.onerror = () => {
+        clearTimeout(timer);
+        script.remove();
+        reject(new Error(`Script failed: ${url}`));
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  function friendlyCameraError(error) {
+    const name = error?.name || "";
+    if (name === "NotAllowedError" || name === "SecurityError") {
+      return "Camera permission is blocked. Click the camera icon in the address bar, choose Allow, then press Try Again.";
+    }
+    if (name === "NotReadableError" || name === "TrackStartError") {
+      return "The camera is already being used by another app or browser tab. Close the other camera app and try again.";
+    }
+    if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      return "No usable camera was found on this device.";
+    }
+    if (name === "OverconstrainedError") {
+      return "This camera does not support the requested mode. We will retry with basic settings.";
+    }
+    return error?.message || "The camera could not be started.";
+  }
+
   function setStatus(message, detected = false) {
     statusText.textContent = message;
     statusBadge.classList.toggle("detected", detected);
     guide.classList.toggle("face-found", detected);
+    if (!detected && !manualMode) updateFitScore(null);
   }
 
   function updateProductUI(product) {
@@ -2180,37 +2497,135 @@ window.addEventListener("pageshow", function () {
     `).join("");
   }
 
+  async function createTasksEngine() {
+    const errors = [];
+
+    for (const candidate of TASKS_ENGINES) {
+      try {
+        const visionModule = await withTimeout(import(candidate.module), 16000, candidate.name);
+        const FaceLandmarker = visionModule.FaceLandmarker || visionModule.default?.FaceLandmarker;
+        const FilesetResolver = visionModule.FilesetResolver || visionModule.default?.FilesetResolver;
+
+        if (!FaceLandmarker || !FilesetResolver) {
+          throw new Error("Required MediaPipe exports were not found.");
+        }
+
+        const fileset = await withTimeout(
+          FilesetResolver.forVisionTasks(candidate.wasm),
+          16000,
+          `${candidate.name} WASM`
+        );
+
+        for (const modelPath of MP_MODELS) {
+          for (const delegate of ["GPU", "CPU"]) {
+            try {
+              const task = await withTimeout(
+                FaceLandmarker.createFromOptions(fileset, {
+                  baseOptions: {
+                    modelAssetPath: modelPath,
+                    delegate
+                  },
+                  runningMode: "VIDEO",
+                  numFaces: 1,
+                  outputFaceBlendshapes: false,
+                  outputFacialTransformationMatrixes: true,
+                  minFaceDetectionConfidence: 0.5,
+                  minFacePresenceConfidence: 0.5,
+                  minTrackingConfidence: 0.5
+                }),
+                26000,
+                `${candidate.name} model`
+              );
+
+              faceLandmarker = task;
+              FaceLandmarkerClass = FaceLandmarker;
+              FilesetResolverClass = FilesetResolver;
+              engineType = "tasks";
+              engineName = `${candidate.name} · ${delegate}`;
+              return task;
+            } catch (error) {
+              errors.push(`${candidate.name}/${delegate}: ${error.message}`);
+            }
+          }
+        }
+      } catch (error) {
+        errors.push(`${candidate.name}: ${error.message}`);
+      }
+    }
+
+    throw new Error(errors.slice(-4).join(" | "));
+  }
+
+  async function createLegacyEngine() {
+    const errors = [];
+
+    for (const candidate of LEGACY_FACE_MESH) {
+      try {
+        if (!window.FaceMesh) {
+          await loadClassicScript(candidate.script);
+        }
+        if (!window.FaceMesh) {
+          throw new Error("FaceMesh global was not created.");
+        }
+
+        const mesh = new window.FaceMesh({
+          locateFile: file => `${candidate.root}/${file}`
+        });
+        mesh.setOptions({
+          maxNumFaces: 1,
+          refineLandmarks: true,
+          selfieMode: facingMode === "user",
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+        mesh.onResults(results => {
+          legacyLandmarks = results.multiFaceLandmarks?.[0] || null;
+          legacyBusy = false;
+          if (legacyLandmarks) lastFaceAt = performance.now();
+        });
+
+        if (typeof mesh.initialize === "function") {
+          await withTimeout(mesh.initialize(), 22000, "FaceMesh initialization");
+        }
+
+        legacyFaceMesh = mesh;
+        engineType = "legacy";
+        engineName = "MediaPipe Face Mesh backup";
+        return mesh;
+      } catch (error) {
+        errors.push(`${candidate.script}: ${error.message}`);
+        legacyFaceMesh = null;
+      }
+    }
+
+    throw new Error(errors.slice(-2).join(" | "));
+  }
+
   async function ensureLandmarker() {
-    if (faceLandmarker) return faceLandmarker;
-    if (landmarkerPromise) return landmarkerPromise;
+    if (faceLandmarker || legacyFaceMesh) {
+      return engineType;
+    }
+    if (landmarkerPromise) {
+      return landmarkerPromise;
+    }
 
     landmarkerPromise = (async () => {
-      const visionModule = await import(MP_MODULE);
-      FaceLandmarkerClass = visionModule.FaceLandmarker;
-      FilesetResolverClass = visionModule.FilesetResolver;
-
-      const fileset = await FilesetResolverClass.forVisionTasks(MP_WASM);
-      const options = {
-        baseOptions: {
-          modelAssetPath: MP_MODEL,
-          delegate: "GPU"
-        },
-        runningMode: "VIDEO",
-        numFaces: 1,
-        outputFaceBlendshapes: false,
-        outputFacialTransformationMatrixes: true,
-        minFaceDetectionConfidence: 0.55,
-        minFacePresenceConfidence: 0.55,
-        minTrackingConfidence: 0.5
-      };
-
       try {
-        faceLandmarker = await FaceLandmarkerClass.createFromOptions(fileset, options);
-      } catch (gpuError) {
-        options.baseOptions.delegate = "CPU";
-        faceLandmarker = await FaceLandmarkerClass.createFromOptions(fileset, options);
+        await createTasksEngine();
+        return engineType;
+      } catch (tasksError) {
+        console.warn("MediaPipe Tasks engine failed, trying legacy Face Mesh:", tasksError);
+        try {
+          await createLegacyEngine();
+          return engineType;
+        } catch (legacyError) {
+          const combined = new Error(
+            `Primary AI engine: ${tasksError.message}. Backup engine: ${legacyError.message}`
+          );
+          combined.cause = { tasksError, legacyError };
+          throw combined;
+        }
       }
-      return faceLandmarker;
     })();
 
     try {
@@ -2229,22 +2644,77 @@ window.addEventListener("pageshow", function () {
     video.srcObject = null;
   }
 
+  async function waitForVideoReady() {
+    if (video.readyState >= 2 && video.videoWidth > 0) return;
+    await withTimeout(new Promise((resolve, reject) => {
+      const onReady = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = () => {
+        cleanup();
+        reject(video.error || new Error("Video element failed."));
+      };
+      const cleanup = () => {
+        video.removeEventListener("loadedmetadata", onReady);
+        video.removeEventListener("canplay", onReady);
+        video.removeEventListener("error", onError);
+      };
+      video.addEventListener("loadedmetadata", onReady, { once: true });
+      video.addEventListener("canplay", onReady, { once: true });
+      video.addEventListener("error", onError, { once: true });
+    }), 10000, "Camera preview");
+  }
+
   async function startCamera() {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Camera access is not supported in this browser.");
     }
+
     stopCamera();
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: { ideal: facingMode },
-        width: { ideal: 1280 },
-        height: { ideal: 960 }
+    const attempts = [
+      {
+        audio: false,
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 960 },
+          frameRate: { ideal: 30, max: 30 }
+        }
+      },
+      {
+        audio: false,
+        video: {
+          facingMode,
+          width: { ideal: 960 },
+          height: { ideal: 720 }
+        }
+      },
+      { audio: false, video: true }
+    ];
+
+    let lastError;
+    for (const constraints of attempts) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        break;
+      } catch (error) {
+        lastError = error;
+        if (error?.name === "NotAllowedError" || error?.name === "SecurityError") break;
       }
-    });
+    }
+
+    if (!stream) throw lastError || new Error("Camera stream was not created.");
+
     video.srcObject = stream;
+    video.muted = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("autoplay", "");
     video.classList.toggle("mirrored", facingMode === "user");
+
+    await waitForVideoReady();
     await video.play();
+    cameraReady = true;
   }
 
   function resizeCanvas() {
@@ -2536,7 +3006,16 @@ window.addEventListener("pageshow", function () {
     const yaw = clamp((nose.x - centerX) / (eyeDistance * .48), -1, 1);
     const frameWidth = faceWidth * .82;
 
-    const target = { cx: centerX, cy: centerY, width: frameWidth, angle, yaw };
+    const centerError = Math.hypot(
+      (centerX - stageWidth / 2) / Math.max(stageWidth, 1),
+      (centerY - stageHeight * .48) / Math.max(stageHeight, 1)
+    );
+    const idealFaceWidth = stageWidth * .42;
+    const sizeError = Math.abs(faceWidth - idealFaceWidth) / Math.max(idealFaceWidth, 1);
+    const yawPenalty = Math.abs(yaw) * .12;
+    const fitQuality = 100 - centerError * 118 - sizeError * 34 - yawPenalty * 100;
+
+    const target = { cx: centerX, cy: centerY, width: frameWidth, angle, yaw, fitQuality };
     if (!smooth) {
       smooth = target;
     } else {
@@ -2545,39 +3024,95 @@ window.addEventListener("pageshow", function () {
       smooth.width = lerp(smooth.width, target.width, .27);
       smooth.angle = smoothAngle(smooth.angle, target.angle, .28);
       smooth.yaw = lerp(smooth.yaw, target.yaw, .22);
+      smooth.fitQuality = lerp(smooth.fitQuality ?? target.fitQuality, target.fitQuality, .18);
     }
+    updateFitScore(smooth.fitQuality);
     return smooth;
+  }
+
+  function getManualTarget(width, height) {
+    const scale = Number(scaleControl.value) / 100;
+    if (!manualTarget) {
+      manualTarget = {
+        cx: width / 2,
+        cy: height * .48,
+        width: Math.min(width * .52, height * .60) / Math.max(scale, .01),
+        angle: 0,
+        yaw: 0,
+        fitQuality: 65
+      };
+    }
+    manualTarget.cx = clamp(manualTarget.cx, width * .16, width * .84);
+    manualTarget.cy = clamp(manualTarget.cy, height * .18, height * .78);
+    manualTarget.width = clamp(manualTarget.width, width * .27, width * .72);
+    return manualTarget;
+  }
+
+  function sendLegacyFrame(now) {
+    if (!legacyFaceMesh || legacyBusy || video.readyState < 2) return;
+    if (now - legacyLastSendAt < 45) return;
+    legacyBusy = true;
+    legacyLastSendAt = now;
+    legacyFaceMesh.send({ image: video }).catch(error => {
+      console.warn("Legacy Face Mesh frame failed:", error);
+      legacyBusy = false;
+    });
   }
 
   function renderLoop() {
     if (!active) return;
     const { width, height } = resizeCanvas();
     ctx.clearRect(0, 0, width, height);
+    const now = performance.now();
 
-    if (faceLandmarker && video.readyState >= 2 && video.videoWidth > 0) {
+    if (engineType === "tasks" && faceLandmarker && video.readyState >= 2 && video.videoWidth > 0) {
       try {
         if (video.currentTime !== lastVideoTime) {
           lastVideoTime = video.currentTime;
-          const result = faceLandmarker.detectForVideo(video, performance.now());
+          const result = faceLandmarker.detectForVideo(video, now);
           const landmarks = result.faceLandmarks?.[0];
           if (landmarks) {
             const fit = estimateFit(landmarks, width, height);
             drawGlasses(fit);
-            lastFaceAt = performance.now();
-            setStatus("Face detected · Live tracking", true);
+            lastFaceAt = now;
+            setStatus("AI locked · Move naturally", true);
             hint.textContent = Math.abs(fit.yaw) > .55
-              ? "Great — turn slowly to inspect the side profile."
-              : "Move naturally. The frame will follow your face.";
+              ? "Nice — turn slowly to inspect the side profile."
+              : "Perfect. Move your head and the frame will follow.";
           }
         }
       } catch (error) {
-        console.warn("Virtual try-on frame error:", error);
+        console.warn("Tasks Vision frame error:", error);
+      }
+    } else if (engineType === "legacy" && legacyFaceMesh) {
+      sendLegacyFrame(now);
+      if (legacyLandmarks) {
+        const fit = estimateFit(legacyLandmarks, width, height);
+        drawGlasses(fit);
+        setStatus("AI locked · Smooth tracking", true);
+        hint.textContent = Math.abs(fit.yaw) > .55
+          ? "Great — turn slowly to inspect the side profile."
+          : "Perfect. Move naturally to check the fit.";
       }
     }
 
-    if (performance.now() - lastFaceAt > 700) {
+    if ((engineType === "loading" || engineType === "manual") && cameraReady) {
+      const target = getManualTarget(width, height);
+      drawGlasses(target);
+      if (engineType === "manual") {
+        updateFitScore(65);
+        setStatus("Manual fit · Drag the glasses", false);
+        hint.textContent = "Drag the frame on your face and use the size controls.";
+      } else {
+        updateFitScore(null);
+        setStatus("Camera live · Calibrating AI…", false);
+        hint.textContent = "AI is loading while your camera remains live.";
+      }
+    }
+
+    if ((engineType === "tasks" || engineType === "legacy") && now - lastFaceAt > 850) {
       setStatus("Looking for your face…", false);
-      hint.textContent = "Keep your face inside the guide and look straight ahead.";
+      hint.textContent = "Move into good light and keep your full face visible.";
       smooth = null;
     }
 
@@ -2585,30 +3120,72 @@ window.addEventListener("pageshow", function () {
   }
 
   async function startExperience() {
-    setLoading("Preparing AI try-on…", "Allow camera access when your browser asks.");
+    const token = ++startupToken;
+    cameraReady = false;
+    manualMode = false;
+    manualTarget = null;
+    legacyLandmarks = null;
+    hideEngineNotice();
+    setEngineChip("CAMERA", "loading");
+    setCameraLiveLoading(false);
+    setLoading("Starting your camera…", "Your live video stays on this device.");
+
     try {
-      await Promise.all([ensureLandmarker(), startCamera()]);
-      if (!active) {
-        stopCamera();
-        return;
-      }
-      lastVideoTime = -1;
-      lastFaceAt = 0;
-      hideLoading();
-      setStatus("Camera live · Finding face…", false);
-      cancelAnimationFrame(animationId);
-      renderLoop();
-    } catch (error) {
-      console.error(error);
-      const secureHint = location.protocol === "https:" || location.hostname === "localhost"
-        ? ""
-        : " Open the deployed GitHub Pages HTTPS link.";
+      await startCamera();
+    } catch (cameraError) {
+      if (token !== startupToken || !active) return;
+      console.error("Camera startup error:", cameraError);
+      setCameraLiveLoading(false);
       setLoading(
         "Camera could not start",
-        `Please allow camera permission and use Chrome, Safari or Edge.${secureHint}`,
+        friendlyCameraError(cameraError),
         true
       );
+      setEngineChip("CAMERA ERROR", "manual");
       setStatus("Camera unavailable", false);
+      return;
+    }
+
+    if (token !== startupToken || !active) return;
+
+    hideLoading();
+    engineType = "loading";
+    setEngineChip("AI LOADING", "loading");
+    setStatus("Camera live · Loading AI…", false);
+    cancelAnimationFrame(animationId);
+    renderLoop();
+
+    // The camera remains usable while the AI engine loads.
+    try {
+      const loadedEngine = await ensureLandmarker();
+      if (token !== startupToken || !active) return;
+
+      engineType = loadedEngine;
+      manualMode = false;
+      smooth = null;
+      manualTarget = null;
+      hideEngineNotice();
+      setEngineChip("LIVE AI", "ready");
+      setStatus("AI ready · Finding face…", false);
+      autoFitBtn.classList.add("active");
+      autoFitBtn.disabled = false;
+      hint.textContent = "Look straight ahead for automatic fitting.";
+    } catch (aiError) {
+      if (token !== startupToken || !active) return;
+      console.error("All AI tracking engines failed:", aiError);
+
+      // Keep the experience functional instead of incorrectly reporting a camera error.
+      engineType = "manual";
+      manualMode = true;
+      smooth = null;
+      setEngineChip("MANUAL FIT", "manual");
+      setStatus("Camera live · Manual fit", false);
+      autoFitBtn.classList.remove("active");
+      autoFitBtn.disabled = true;
+      showEngineNotice(
+        "Live camera is working",
+        "The AI tracking files could not load from the network. Manual fitting is active, so you can drag, resize and photograph the frame. Refreshing on a stronger connection will retry both AI engines."
+      );
     }
   }
 
@@ -2631,6 +3208,8 @@ window.addEventListener("pageshow", function () {
 
   function closeTryOn() {
     active = false;
+    startupToken += 1;
+    cameraReady = false;
     cancelAnimationFrame(animationId);
     stopCamera();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2638,8 +3217,12 @@ window.addEventListener("pageshow", function () {
     modal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("no-scroll");
     hideLoading();
+    hideEngineNotice();
     setStatus("Ready", false);
+    updateFitScore(null);
     smooth = null;
+    manualTarget = null;
+    draggingManual = false;
   }
 
   function drawVideoCover(targetCtx, width, height) {
@@ -2725,18 +3308,24 @@ window.addEventListener("pageshow", function () {
   flipBtn.addEventListener("click", async () => {
     facingMode = facingMode === "user" ? "environment" : "user";
     smooth = null;
+    manualTarget = null;
+    setCameraLiveLoading(true);
     setLoading("Switching camera…", "Please wait a moment.");
     try {
       await startCamera();
+      if (legacyFaceMesh?.setOptions) {
+        legacyFaceMesh.setOptions({ selfieMode: facingMode === "user" });
+      }
       hideLoading();
-      setStatus("Camera live · Finding face…", false);
+      setStatus(engineType === "manual" ? "Manual fit · Camera switched" : "Camera live · Finding face…", false);
     } catch (error) {
       facingMode = "user";
       try {
         await startCamera();
         hideLoading();
-      } catch {
-        setLoading("Could not switch camera", "Your device may only expose one camera to the browser.", true);
+      } catch (fallbackError) {
+        setCameraLiveLoading(false);
+        setLoading("Could not switch camera", friendlyCameraError(fallbackError), true);
       }
     }
   });
@@ -2749,6 +3338,51 @@ window.addEventListener("pageshow", function () {
     }
   });
 
+  autoFitBtn.addEventListener("click", () => {
+    if (engineType === "tasks" || engineType === "legacy") {
+      manualMode = false;
+      smooth = null;
+      manualTarget = null;
+      autoFitBtn.classList.add("active");
+      setStatus("Auto AI fit · Finding face…", false);
+    }
+  });
+
+  recenterBtn.addEventListener("click", () => {
+    manualTarget = null;
+    smooth = null;
+    scaleControl.value = "100";
+    offsetControl.value = "0";
+    window.toast?.("Frame fit reset");
+  });
+
+  canvas.addEventListener("pointerdown", event => {
+    if (engineType !== "manual") return;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const target = getManualTarget(width, height);
+    draggingManual = true;
+    dragOffset.x = event.clientX - rect.left - target.cx;
+    dragOffset.y = event.clientY - rect.top - target.cy;
+    canvas.setPointerCapture?.(event.pointerId);
+  });
+
+  canvas.addEventListener("pointermove", event => {
+    if (!draggingManual || engineType !== "manual") return;
+    const rect = canvas.getBoundingClientRect();
+    const target = getManualTarget(rect.width, rect.height);
+    target.cx = event.clientX - rect.left - dragOffset.x;
+    target.cy = event.clientY - rect.top - dragOffset.y;
+  });
+
+  const finishDrag = event => {
+    draggingManual = false;
+    try { canvas.releasePointerCapture?.(event.pointerId); } catch {}
+  };
+  canvas.addEventListener("pointerup", finishDrag);
+  canvas.addEventListener("pointercancel", finishDrag);
+
   window.addEventListener("resize", () => {
     if (active) resizeCanvas();
   });
@@ -2756,6 +3390,7 @@ window.addEventListener("pageshow", function () {
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && active) {
       stopCamera();
+      cameraReady = false;
     } else if (!document.hidden && active) {
       startExperience();
     }
