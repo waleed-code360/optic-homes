@@ -692,6 +692,489 @@ input[type="file"] {
   }
 }
 
+
+/* ===== Live AI Virtual Try-On ===== */
+.ai-tryon-feature {
+  padding: 44px 0;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255,255,255,.65), transparent 32%),
+    linear-gradient(120deg, #17241e, #2f473b);
+  color: white;
+}
+.ai-tryon-feature-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 36px;
+}
+.ai-tryon-feature h2 {
+  max-width: 760px;
+  font-size: clamp(34px, 4vw, 54px);
+}
+.ai-tryon-feature p:not(.eyebrow) {
+  max-width: 720px;
+  color: rgba(255,255,255,.74);
+  font-size: 17px;
+}
+.ai-tryon-feature .eyebrow { color: #d9b98f; }
+.ai-feature-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.btn-ai {
+  flex-shrink: 0;
+  background: white;
+  color: var(--ink);
+  border: 0;
+  min-height: 58px;
+  padding-inline: 26px;
+}
+.btn-ai-icon,
+.tryon-btn span {
+  margin-right: 7px;
+}
+.product-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+.tryon-btn {
+  background: #e7eee9;
+  color: var(--ink);
+  border-color: #cad7cf;
+}
+.tryon-btn:hover {
+  background: #dce8df;
+}
+.dialog-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.tryon-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: none;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  background: #07100c;
+  color: white;
+  overflow: hidden;
+}
+.tryon-modal.open { display: block; }
+.tryon-shell {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 64px minmax(240px, 1fr) auto;
+  overflow: hidden;
+}
+.tryon-topbar {
+  z-index: 3;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+  background: rgba(7,16,12,.94);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.tryon-icon-btn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  color: white;
+  font-size: 25px;
+  cursor: pointer;
+}
+.tryon-brand {
+  min-width: 0;
+  text-align: center;
+  display: grid;
+  line-height: 1.15;
+}
+.tryon-brand strong {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 19px;
+}
+.tryon-brand span {
+  margin-top: 3px;
+  color: rgba(255,255,255,.62);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+}
+.tryon-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at center, #31443b, #0c1712 70%);
+}
+#tryonVideo,
+#tryonCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#tryonVideo {
+  object-fit: cover;
+}
+#tryonVideo.mirrored {
+  transform: scaleX(-1);
+}
+#tryonCanvas {
+  z-index: 2;
+  pointer-events: none;
+}
+.tryon-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 30px;
+  text-align: center;
+  background: rgba(7,16,12,.88);
+}
+.tryon-loading[hidden] { display: none; }
+.tryon-loading span {
+  max-width: 360px;
+  color: rgba(255,255,255,.68);
+  font-size: 13px;
+}
+.tryon-spinner {
+  width: 42px;
+  height: 42px;
+  border: 3px solid rgba(255,255,255,.22);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: tryonSpin .85s linear infinite;
+}
+@keyframes tryonSpin { to { transform: rotate(360deg); } }
+
+.tryon-face-guide {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 49%;
+  width: min(64vw, 330px);
+  aspect-ratio: .78;
+  transform: translate(-50%, -50%);
+  border: 1px dashed rgba(255,255,255,.38);
+  border-radius: 48% 48% 44% 44%;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.tryon-face-guide span,
+.tryon-face-guide::before,
+.tryon-face-guide::after {
+  content: "";
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: rgba(255,255,255,.86);
+}
+.tryon-face-guide::before {
+  left: -2px;
+  top: -2px;
+  border-left: 3px solid;
+  border-top: 3px solid;
+  border-radius: 16px 0 0;
+}
+.tryon-face-guide::after {
+  right: -2px;
+  top: -2px;
+  border-right: 3px solid;
+  border-top: 3px solid;
+  border-radius: 0 16px 0 0;
+}
+.tryon-face-guide span {
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  border-bottom: 3px solid;
+  border-radius: 0 0 16px 16px;
+}
+.tryon-face-guide.face-found { opacity: .18; }
+
+.tryon-live-badge {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  left: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 28px);
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: rgba(7,16,12,.72);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  font-weight: 700;
+}
+.tryon-live-badge i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e05252;
+  box-shadow: 0 0 0 5px rgba(224,82,82,.15);
+}
+.tryon-live-badge.detected i {
+  background: #45d17d;
+  box-shadow: 0 0 0 5px rgba(69,209,125,.15);
+}
+.tryon-hint {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 28px);
+  padding: 9px 13px;
+  border-radius: 999px;
+  background: rgba(7,16,12,.68);
+  color: rgba(255,255,255,.86);
+  text-align: center;
+  font-size: 11px;
+  backdrop-filter: blur(10px);
+}
+.tryon-panel {
+  min-width: 0;
+  padding: 14px max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: #fbfaf7;
+  color: var(--ink);
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -18px 50px rgba(0,0,0,.2);
+}
+.tryon-product-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+.tryon-product-row img {
+  width: 58px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: var(--ivory);
+}
+.tryon-product-row > div {
+  min-width: 0;
+  display: grid;
+}
+.tryon-product-row span:not(.tryon-ai-chip) {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.tryon-product-row strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tryon-product-row b {
+  margin-top: 2px;
+  font-size: 12px;
+}
+.tryon-ai-chip {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: var(--sage);
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 900;
+}
+.tryon-adjustments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 12px;
+}
+.tryon-adjustments label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.tryon-adjustments label span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.tryon-adjustments input[type="range"] {
+  width: 100%;
+  accent-color: var(--ink);
+}
+.tryon-carousel-wrap {
+  margin-top: 10px;
+}
+.tryon-carousel-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.tryon-carousel-label span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.tryon-carousel {
+  display: flex;
+  gap: 8px;
+  margin-top: 7px;
+  padding: 2px 2px 5px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+.tryon-carousel::-webkit-scrollbar { display: none; }
+.tryon-frame-option {
+  flex: 0 0 64px;
+  width: 64px;
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  cursor: pointer;
+}
+.tryon-frame-option img {
+  width: 56px;
+  height: 43px;
+  object-fit: cover;
+  border-radius: 9px;
+  background: var(--ivory);
+}
+.tryon-frame-option.active {
+  border-color: var(--ink);
+  background: white;
+}
+.tryon-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 9px;
+}
+.tryon-actions .btn {
+  min-height: 44px;
+  font-size: 13px;
+}
+.tryon-capture-btn {
+  border-color: var(--line);
+  background: white;
+}
+.tryon-privacy {
+  margin: 8px 0 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 9px;
+}
+.tryon-error-action {
+  margin-top: 8px;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 999px;
+  background: rgba(255,255,255,.1);
+  color: white;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+@media (min-width: 980px) {
+  .tryon-shell {
+    grid-template-columns: minmax(0, 1fr) 390px;
+    grid-template-rows: 64px minmax(0, 1fr);
+  }
+  .tryon-topbar {
+    grid-column: 1 / -1;
+  }
+  .tryon-stage {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .tryon-panel {
+    grid-column: 2;
+    grid-row: 2;
+    overflow-y: auto;
+    border-radius: 0;
+    padding: 24px;
+  }
+  .tryon-product-row img {
+    width: 76px;
+    height: 62px;
+  }
+  .tryon-product-row {
+    grid-template-columns: 76px minmax(0, 1fr) auto;
+  }
+  .tryon-adjustments {
+    grid-template-columns: 1fr;
+    margin-top: 24px;
+  }
+  .tryon-carousel-wrap { margin-top: 22px; }
+  .tryon-carousel {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    overflow: visible;
+  }
+  .tryon-frame-option {
+    width: 100%;
+    flex-basis: auto;
+  }
+  .tryon-frame-option img {
+    width: 100%;
+    height: 58px;
+  }
+  .tryon-actions {
+    margin-top: 24px;
+    grid-template-columns: 1fr;
+  }
+  .tryon-privacy {
+    margin-top: 14px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 720px) {
+  .ai-tryon-feature-grid {
+    grid-template-columns: 1fr;
+  }
+  .btn-ai { width: 100%; }
+}
+@media (max-width: 640px) {
+  .product-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+  }
+  .product-actions .btn {
+    min-height: 44px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+  .tryon-shell {
+    grid-template-rows: 58px minmax(260px, 1fr) auto;
+  }
+  .tryon-topbar { padding-block: 6px; }
+  .tryon-icon-btn { width: 42px; height: 42px; }
+}
+@media (max-width: 390px) {
+  .tryon-adjustments { grid-template-columns: 1fr; gap: 7px; }
+  .tryon-frame-option { flex-basis: 58px; width: 58px; }
+  .tryon-frame-option img { width: 50px; height: 39px; }
+}
+
 </style>
 </head>
 <body>
@@ -779,6 +1262,25 @@ input[type="file"] {
         <article><strong>Prescription Support</strong><span>Send your eyesight details</span></article>
         <article><strong>Cash on Delivery</strong><span>Easy payment at your doorstep</span></article>
         <article><strong>Quality Checked</strong><span>Every pair inspected before dispatch</span></article>
+      </div>
+    </section>
+
+    <section class="ai-tryon-feature" aria-labelledby="aiTryOnTitle">
+      <div class="container ai-tryon-feature-grid">
+        <div>
+          <p class="eyebrow">New · Live AI experience</p>
+          <h2 id="aiTryOnTitle">Try frames on your face before ordering.</h2>
+          <p>Open your phone camera, move naturally, and see the selected frame follow your eyes, nose and head angle in real time.</p>
+          <div class="ai-feature-points">
+            <span>✓ Live face tracking</span>
+            <span>✓ Multiple frame styles</span>
+            <span>✓ Private on-device processing</span>
+          </div>
+        </div>
+        <button class="btn btn-ai" type="button" data-tryon="1">
+          <span class="btn-ai-icon" aria-hidden="true">◉</span>
+          Start Virtual Try-On
+        </button>
       </div>
     </section>
 
@@ -1097,6 +1599,80 @@ input[type="file"] {
   </aside>
   <div class="overlay" id="overlay" hidden></div>
 
+
+  <section class="tryon-modal" id="tryonModal" aria-hidden="true" aria-label="Optic Homes live virtual try-on">
+    <div class="tryon-shell">
+      <header class="tryon-topbar">
+        <button class="tryon-icon-btn" id="tryonClose" type="button" aria-label="Close virtual try-on">×</button>
+        <div class="tryon-brand">
+          <strong>Optic Homes</strong>
+          <span>Live AI Try-On</span>
+        </div>
+        <button class="tryon-icon-btn" id="tryonFlip" type="button" aria-label="Switch camera">↻</button>
+      </header>
+
+      <div class="tryon-stage" id="tryonStage">
+        <video id="tryonVideo" playsinline muted aria-label="Live camera preview"></video>
+        <canvas id="tryonCanvas" aria-label="Virtual glasses overlay"></canvas>
+
+        <div class="tryon-loading" id="tryonLoading">
+          <div class="tryon-spinner" aria-hidden="true"></div>
+          <strong id="tryonLoadingTitle">Preparing AI try-on…</strong>
+          <span id="tryonLoadingText">Camera access is required. Your video is not uploaded.</span>
+        </div>
+
+        <div class="tryon-face-guide" id="tryonGuide" aria-hidden="true">
+          <span></span>
+        </div>
+
+        <div class="tryon-live-badge">
+          <i aria-hidden="true"></i>
+          <span id="tryonStatus">Ready</span>
+        </div>
+
+        <div class="tryon-hint" id="tryonHint">Keep your face inside the guide and look straight ahead.</div>
+      </div>
+
+      <div class="tryon-panel">
+        <div class="tryon-product-row">
+          <img id="tryonProductImage" alt="">
+          <div>
+            <span id="tryonProductCategory">Sunglasses</span>
+            <strong id="tryonProductName">Midnight Classic</strong>
+            <b id="tryonProductPrice">PKR 3,200</b>
+          </div>
+          <span class="tryon-ai-chip">AI FIT</span>
+        </div>
+
+        <div class="tryon-adjustments">
+          <label>
+            <span>Frame size</span>
+            <input id="tryonScale" type="range" min="82" max="120" value="100" step="1">
+          </label>
+          <label>
+            <span>Vertical fit</span>
+            <input id="tryonOffset" type="range" min="-24" max="24" value="0" step="1">
+          </label>
+        </div>
+
+        <div class="tryon-carousel-wrap">
+          <div class="tryon-carousel-label">
+            <strong>Switch frame</strong>
+            <span>Swipe to compare</span>
+          </div>
+          <div class="tryon-carousel" id="tryonCarousel" role="list"></div>
+        </div>
+
+        <div class="tryon-actions">
+          <button class="btn tryon-capture-btn" id="tryonCapture" type="button">Take Photo</button>
+          <button class="btn btn-dark" id="tryonAddCart" type="button">Add to Cart</button>
+        </div>
+
+        <p class="tryon-privacy">Face tracking runs in your browser. Optic Homes does not store or upload your live camera feed.</p>
+      </div>
+    </div>
+  </section>
+
   <dialog class="product-dialog" id="productDialog">
     <button class="dialog-close" id="dialogClose" aria-label="Close product details">×</button>
     <div id="dialogContent"></div>
@@ -1203,6 +1779,9 @@ function renderProducts() {
         </div>
         <div class="product-actions">
           <button class="btn btn-dark" data-add="${p.id}">Add to Cart</button>
+          <button class="btn tryon-btn" data-tryon="${p.id}" type="button">
+            <span aria-hidden="true">◉</span> Try On
+          </button>
           <button class="quick-btn" data-quick="${p.id}" aria-label="Quick view ${p.name}">＋</button>
         </div>
       </div>
@@ -1298,7 +1877,12 @@ function openQuickView(productId) {
           <div><strong>Shape</strong><span>${p.shape}</span></div>
           <div><strong>Delivery</strong><span>Across Pakistan</span></div>
         </div>
-        <button class="btn btn-dark btn-full" data-dialog-add="${p.id}">Add to Cart</button>
+        <div class="dialog-actions">
+          <button class="btn btn-dark btn-full" data-dialog-add="${p.id}">Add to Cart</button>
+          <button class="btn tryon-btn btn-full" data-tryon="${p.id}" type="button">
+            <span aria-hidden="true">◉</span> Try On Live
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -1477,6 +2061,708 @@ renderCart();
 window.addEventListener("pageshow", function () {
   if (window.scrollX !== 0) window.scrollTo(0, window.scrollY);
 });
+</script>
+
+
+<script type="module">
+(() => {
+  const MP_VERSION = "0.10.22";
+  const MP_MODULE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/+esm`;
+  const MP_WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`;
+  const MP_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+
+  const products = window.OPTIC_PRODUCTS || [];
+  const modal = document.getElementById("tryonModal");
+  const stage = document.getElementById("tryonStage");
+  const video = document.getElementById("tryonVideo");
+  const canvas = document.getElementById("tryonCanvas");
+  const ctx = canvas.getContext("2d");
+  const closeBtn = document.getElementById("tryonClose");
+  const flipBtn = document.getElementById("tryonFlip");
+  const captureBtn = document.getElementById("tryonCapture");
+  const addCartBtn = document.getElementById("tryonAddCart");
+  const carousel = document.getElementById("tryonCarousel");
+  const scaleControl = document.getElementById("tryonScale");
+  const offsetControl = document.getElementById("tryonOffset");
+  const loading = document.getElementById("tryonLoading");
+  const loadingTitle = document.getElementById("tryonLoadingTitle");
+  const loadingText = document.getElementById("tryonLoadingText");
+  const statusText = document.getElementById("tryonStatus");
+  const statusBadge = document.querySelector(".tryon-live-badge");
+  const guide = document.getElementById("tryonGuide");
+  const hint = document.getElementById("tryonHint");
+  const productImage = document.getElementById("tryonProductImage");
+  const productName = document.getElementById("tryonProductName");
+  const productPrice = document.getElementById("tryonProductPrice");
+  const productCategory = document.getElementById("tryonProductCategory");
+
+  let FaceLandmarkerClass = null;
+  let FilesetResolverClass = null;
+  let faceLandmarker = null;
+  let landmarkerPromise = null;
+  let stream = null;
+  let animationId = 0;
+  let currentProduct = products[0] || null;
+  let facingMode = "user";
+  let active = false;
+  let lastVideoTime = -1;
+  let lastFaceAt = 0;
+  let smooth = null;
+
+  const frameStyles = {
+    1:  { frame: "#161a18", edge: "#5d625f", lens: "rgba(50,43,35,.28)", metal: false, thickness: 1.10 },
+    2:  { frame: "#8a5434", edge: "#c38d61", lens: "rgba(189,125,66,.10)", metal: false, thickness: 1.00 },
+    3:  { frame: "rgba(215,233,231,.72)", edge: "#92aaa8", lens: "rgba(108,183,203,.08)", metal: false, thickness: .82 },
+    4:  { frame: "#52604d", edge: "#84907e", lens: "rgba(130,150,120,.08)", metal: false, thickness: 1.05 },
+    5:  { frame: "#a96f6e", edge: "#e2b7a4", lens: "rgba(206,135,145,.07)", metal: true, thickness: .72 },
+    6:  { frame: "#2e3338", edge: "#747c83", lens: "rgba(80,90,100,.07)", metal: false, thickness: 1.02 },
+    7:  { frame: "#246b73", edge: "#75afb4", lens: "rgba(25,120,145,.24)", metal: false, thickness: 1.14 },
+    8:  { frame: "#9b7228", edge: "#e3be6f", lens: "rgba(190,132,36,.22)", metal: true, thickness: .78 },
+    9:  { frame: "#161616", edge: "#777", lens: "rgba(28,31,33,.34)", metal: true, thickness: .70 },
+    10: { frame: "#6a3829", edge: "#bd754b", lens: "rgba(89,55,36,.28)", metal: false, thickness: 1.08, tortoise: true },
+    11: { frame: "#3975bd", edge: "#8cb8e9", lens: "rgba(65,135,210,.16)", metal: false, thickness: 1.00 },
+    12: { frame: "#5d6266", edge: "#b8bdc0", lens: "rgba(65,70,75,.20)", metal: false, thickness: .92 }
+  };
+
+  const formatCurrency = (value) => `PKR ${Number(value).toLocaleString("en-PK")}`;
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const lerp = (a, b, amount) => a + (b - a) * amount;
+  const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  function setLoading(title, text, isError = false) {
+    loading.hidden = false;
+    loadingTitle.textContent = title;
+    loadingText.textContent = text;
+    loading.querySelector(".tryon-spinner").style.display = isError ? "none" : "block";
+    const oldRetry = loading.querySelector(".tryon-error-action");
+    if (oldRetry) oldRetry.remove();
+    if (isError) {
+      const retry = document.createElement("button");
+      retry.className = "tryon-error-action";
+      retry.type = "button";
+      retry.textContent = "Try Again";
+      retry.addEventListener("click", () => startExperience(), { once: true });
+      loading.appendChild(retry);
+    }
+  }
+
+  function hideLoading() {
+    loading.hidden = true;
+  }
+
+  function setStatus(message, detected = false) {
+    statusText.textContent = message;
+    statusBadge.classList.toggle("detected", detected);
+    guide.classList.toggle("face-found", detected);
+  }
+
+  function updateProductUI(product) {
+    if (!product) return;
+    currentProduct = product;
+    productImage.src = product.image;
+    productImage.alt = product.name;
+    productName.textContent = product.name;
+    productPrice.textContent = formatCurrency(product.price);
+    productCategory.textContent = `${product.category} · ${product.shape}`;
+    carousel.querySelectorAll(".tryon-frame-option").forEach(button => {
+      button.classList.toggle("active", Number(button.dataset.productId) === product.id);
+      button.setAttribute("aria-pressed", String(Number(button.dataset.productId) === product.id));
+    });
+    smooth = null;
+  }
+
+  function buildCarousel() {
+    carousel.innerHTML = products.map(product => `
+      <button class="tryon-frame-option" type="button" role="listitem"
+        data-product-id="${product.id}" aria-label="Try ${product.name}" aria-pressed="false">
+        <img src="${product.image}" alt="">
+      </button>
+    `).join("");
+  }
+
+  async function ensureLandmarker() {
+    if (faceLandmarker) return faceLandmarker;
+    if (landmarkerPromise) return landmarkerPromise;
+
+    landmarkerPromise = (async () => {
+      const visionModule = await import(MP_MODULE);
+      FaceLandmarkerClass = visionModule.FaceLandmarker;
+      FilesetResolverClass = visionModule.FilesetResolver;
+
+      const fileset = await FilesetResolverClass.forVisionTasks(MP_WASM);
+      const options = {
+        baseOptions: {
+          modelAssetPath: MP_MODEL,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFaceBlendshapes: false,
+        outputFacialTransformationMatrixes: true,
+        minFaceDetectionConfidence: 0.55,
+        minFacePresenceConfidence: 0.55,
+        minTrackingConfidence: 0.5
+      };
+
+      try {
+        faceLandmarker = await FaceLandmarkerClass.createFromOptions(fileset, options);
+      } catch (gpuError) {
+        options.baseOptions.delegate = "CPU";
+        faceLandmarker = await FaceLandmarkerClass.createFromOptions(fileset, options);
+      }
+      return faceLandmarker;
+    })();
+
+    try {
+      return await landmarkerPromise;
+    } catch (error) {
+      landmarkerPromise = null;
+      throw error;
+    }
+  }
+
+  function stopCamera() {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+    video.srcObject = null;
+  }
+
+  async function startCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Camera access is not supported in this browser.");
+    }
+    stopCamera();
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: { ideal: facingMode },
+        width: { ideal: 1280 },
+        height: { ideal: 960 }
+      }
+    });
+    video.srcObject = stream;
+    video.classList.toggle("mirrored", facingMode === "user");
+    await video.play();
+  }
+
+  function resizeCanvas() {
+    const width = Math.max(1, Math.round(stage.clientWidth));
+    const height = Math.max(1, Math.round(stage.clientHeight));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const pixelWidth = Math.round(width * dpr);
+    const pixelHeight = Math.round(height * dpr);
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+      canvas.width = pixelWidth;
+      canvas.height = pixelHeight;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { width, height, dpr };
+  }
+
+  function mapLandmark(landmark, stageWidth, stageHeight) {
+    const videoWidth = video.videoWidth || 1;
+    const videoHeight = video.videoHeight || 1;
+    const scale = Math.max(stageWidth / videoWidth, stageHeight / videoHeight);
+    const displayWidth = videoWidth * scale;
+    const displayHeight = videoHeight * scale;
+    const offsetX = (stageWidth - displayWidth) / 2;
+    const offsetY = (stageHeight - displayHeight) / 2;
+    let x = landmark.x * displayWidth + offsetX;
+    if (facingMode === "user") x = stageWidth - x;
+    return {
+      x,
+      y: landmark.y * displayHeight + offsetY,
+      z: landmark.z || 0
+    };
+  }
+
+  function smoothAngle(previous, next, amount) {
+    let delta = next - previous;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    return previous + delta * amount;
+  }
+
+  function roundedRectPath(x, y, width, height, radius) {
+    const path = new Path2D();
+    const r = Math.min(radius, width / 2, height / 2);
+    path.moveTo(x + r, y);
+    path.lineTo(x + width - r, y);
+    path.quadraticCurveTo(x + width, y, x + width, y + r);
+    path.lineTo(x + width, y + height - r);
+    path.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    path.lineTo(x + r, y + height);
+    path.quadraticCurveTo(x, y + height, x, y + height - r);
+    path.lineTo(x, y + r);
+    path.quadraticCurveTo(x, y, x + r, y);
+    path.closePath();
+    return path;
+  }
+
+  function lensPath(shape, centerX, centerY, width, height, side) {
+    const x = centerX - width / 2;
+    const y = centerY - height / 2;
+    const path = new Path2D();
+    switch (shape) {
+      case "Round":
+        path.ellipse(centerX, centerY, width / 2, height / 2, 0, 0, Math.PI * 2);
+        break;
+      case "Oval":
+        path.ellipse(centerX, centerY, width / 2, height * .43, 0, 0, Math.PI * 2);
+        break;
+      case "Rectangle":
+        return roundedRectPath(x, y + height * .08, width, height * .84, height * .16);
+      case "Cat Eye": {
+        const outer = side < 0 ? x : x + width;
+        const inner = side < 0 ? x + width : x;
+        path.moveTo(inner, y + height * .18);
+        path.quadraticCurveTo(centerX, y - height * .02, outer, y + height * .06);
+        path.quadraticCurveTo(outer + side * width * .05, centerY, outer, y + height * .78);
+        path.quadraticCurveTo(centerX, y + height * 1.03, inner, y + height * .78);
+        path.quadraticCurveTo(inner - side * width * .02, centerY, inner, y + height * .18);
+        path.closePath();
+        break;
+      }
+      case "Aviator":
+        path.moveTo(x + width * .08, y + height * .12);
+        path.quadraticCurveTo(centerX, y - height * .02, x + width * .92, y + height * .12);
+        path.quadraticCurveTo(x + width, centerY, centerX, y + height);
+        path.quadraticCurveTo(x, centerY, x + width * .08, y + height * .12);
+        path.closePath();
+        break;
+      case "Wrap":
+        path.moveTo(x + width * .04, centerY);
+        path.quadraticCurveTo(x + width * .12, y, centerX, y + height * .04);
+        path.quadraticCurveTo(x + width * .9, y, x + width * .98, centerY);
+        path.quadraticCurveTo(x + width * .86, y + height, centerX, y + height * .94);
+        path.quadraticCurveTo(x + width * .14, y + height, x + width * .04, centerY);
+        path.closePath();
+        break;
+      case "Square":
+      default:
+        return roundedRectPath(x, y, width, height, height * .23);
+    }
+    path.closePath();
+    return path;
+  }
+
+  function drawLensReflection(path, centerX, centerY, width, height) {
+    ctx.save();
+    ctx.clip(path);
+    ctx.translate(centerX, centerY);
+    ctx.rotate(-0.35);
+    const gradient = ctx.createLinearGradient(-width / 2, 0, width / 2, 0);
+    gradient.addColorStop(0, "rgba(255,255,255,0)");
+    gradient.addColorStop(.42, "rgba(255,255,255,.05)");
+    gradient.addColorStop(.52, "rgba(255,255,255,.28)");
+    gradient.addColorStop(.64, "rgba(255,255,255,.04)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(-width, -height, width * 2, height * 2);
+    ctx.restore();
+  }
+
+  function drawGlasses(target) {
+    if (!currentProduct) return;
+    const style = frameStyles[currentProduct.id] || frameStyles[1];
+    const shape = currentProduct.shape || "Square";
+    const sizeFactor = Number(scaleControl.value) / 100;
+    const verticalOffset = Number(offsetControl.value);
+
+    const width = target.width * sizeFactor;
+    const heightRatios = {
+      Round: .38, Oval: .32, Rectangle: .30, Square: .34,
+      "Cat Eye": .34, Aviator: .42, Wrap: .30
+    };
+    const height = width * (heightRatios[shape] || .34);
+    const yaw = clamp(target.yaw, -1, 1);
+    const frameThickness = clamp(height * .075 * style.thickness, 3, 15);
+    const gap = width * .055;
+    const lensWidth = (width - gap) / 2;
+    const leftCenter = -(gap / 2 + lensWidth / 2);
+    const rightCenter = gap / 2 + lensWidth / 2;
+    const lensY = verticalOffset;
+
+    ctx.save();
+    ctx.translate(target.cx, target.cy);
+    ctx.rotate(target.angle);
+    ctx.scale(1 - Math.abs(yaw) * .055, 1);
+
+    // Soft depth shadow.
+    ctx.save();
+    ctx.translate(yaw * width * .025, height * .055);
+    ctx.shadowColor = "rgba(0,0,0,.34)";
+    ctx.shadowBlur = frameThickness * 1.8;
+    ctx.strokeStyle = "rgba(0,0,0,.18)";
+    ctx.lineWidth = frameThickness * 1.2;
+    const shadowLeft = lensPath(shape, leftCenter, lensY, lensWidth, height, -1);
+    const shadowRight = lensPath(shape, rightCenter, lensY, lensWidth, height, 1);
+    ctx.stroke(shadowLeft);
+    ctx.stroke(shadowRight);
+    ctx.restore();
+
+    // 3D side temples, rendered behind the lenses.
+    const leftTempleLength = width * (.24 + Math.max(0, yaw) * .18);
+    const rightTempleLength = width * (.24 + Math.max(0, -yaw) * .18);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = frameThickness * .76;
+    ctx.strokeStyle = style.frame;
+
+    ctx.globalAlpha = clamp(.7 - yaw * .22, .32, .95);
+    ctx.beginPath();
+    ctx.moveTo(-width / 2 + frameThickness, lensY - height * .06);
+    ctx.quadraticCurveTo(
+      -width / 2 - leftTempleLength * .48,
+      lensY + height * (.02 + yaw * .04),
+      -width / 2 - leftTempleLength,
+      lensY + height * (.27 + yaw * .09)
+    );
+    ctx.stroke();
+
+    ctx.globalAlpha = clamp(.7 + yaw * .22, .32, .95);
+    ctx.beginPath();
+    ctx.moveTo(width / 2 - frameThickness, lensY - height * .06);
+    ctx.quadraticCurveTo(
+      width / 2 + rightTempleLength * .48,
+      lensY + height * (.02 - yaw * .04),
+      width / 2 + rightTempleLength,
+      lensY + height * (.27 - yaw * .09)
+    );
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    const leftPath = lensPath(shape, leftCenter, lensY, lensWidth, height, -1);
+    const rightPath = lensPath(shape, rightCenter, lensY, lensWidth, height, 1);
+
+    // Lenses.
+    const lensGradient = ctx.createLinearGradient(0, -height / 2, 0, height / 2);
+    lensGradient.addColorStop(0, style.lens);
+    lensGradient.addColorStop(1, style.lens.replace(/[\d.]+\)$/, "0.06)"));
+    ctx.fillStyle = lensGradient;
+    ctx.fill(leftPath);
+    ctx.fill(rightPath);
+    drawLensReflection(leftPath, leftCenter, lensY, lensWidth, height);
+    drawLensReflection(rightPath, rightCenter, lensY, lensWidth, height);
+
+    // Frame rims with subtle depth edge.
+    const frameGradient = ctx.createLinearGradient(-width / 2, -height / 2, width / 2, height / 2);
+    frameGradient.addColorStop(0, style.edge);
+    frameGradient.addColorStop(.28, style.frame);
+    frameGradient.addColorStop(.72, style.frame);
+    frameGradient.addColorStop(1, style.edge);
+    ctx.strokeStyle = frameGradient;
+    ctx.lineWidth = frameThickness;
+    ctx.shadowColor = "rgba(0,0,0,.2)";
+    ctx.shadowBlur = frameThickness * .45;
+    ctx.stroke(leftPath);
+    ctx.stroke(rightPath);
+    ctx.shadowBlur = 0;
+
+    // Tortoise pattern accent.
+    if (style.tortoise) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(220,135,74,.55)";
+      ctx.lineWidth = Math.max(1.5, frameThickness * .22);
+      ctx.setLineDash([frameThickness * .65, frameThickness * 1.05]);
+      ctx.stroke(leftPath);
+      ctx.stroke(rightPath);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // Bridge.
+    ctx.strokeStyle = frameGradient;
+    ctx.lineWidth = frameThickness * .82;
+    ctx.beginPath();
+    ctx.moveTo(-gap / 2 - frameThickness * .12, lensY - height * .06);
+    ctx.bezierCurveTo(
+      -gap * .25, lensY - height * .18,
+      gap * .25, lensY - height * .18,
+      gap / 2 + frameThickness * .12, lensY - height * .06
+    );
+    ctx.stroke();
+
+    // Hinges and nose pads for depth.
+    ctx.fillStyle = style.edge;
+    ctx.beginPath();
+    ctx.arc(-width / 2 + frameThickness * .65, lensY - height * .05, frameThickness * .28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(width / 2 - frameThickness * .65, lensY - height * .05, frameThickness * .28, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (style.metal) {
+      ctx.strokeStyle = "rgba(255,255,255,.5)";
+      ctx.lineWidth = Math.max(1, frameThickness * .18);
+      ctx.beginPath();
+      ctx.moveTo(-gap * .38, lensY + height * .02);
+      ctx.lineTo(-gap * .23, lensY + height * .22);
+      ctx.moveTo(gap * .38, lensY + height * .02);
+      ctx.lineTo(gap * .23, lensY + height * .22);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function estimateFit(landmarks, stageWidth, stageHeight) {
+    const rightOuter = mapLandmark(landmarks[33], stageWidth, stageHeight);
+    const rightInner = mapLandmark(landmarks[133], stageWidth, stageHeight);
+    const leftInner = mapLandmark(landmarks[362], stageWidth, stageHeight);
+    const leftOuter = mapLandmark(landmarks[263], stageWidth, stageHeight);
+    const faceRight = mapLandmark(landmarks[234], stageWidth, stageHeight);
+    const faceLeft = mapLandmark(landmarks[454], stageWidth, stageHeight);
+    const nose = mapLandmark(landmarks[1], stageWidth, stageHeight);
+
+    const rightEye = {
+      x: (rightOuter.x + rightInner.x) / 2,
+      y: (rightOuter.y + rightInner.y) / 2
+    };
+    const leftEye = {
+      x: (leftOuter.x + leftInner.x) / 2,
+      y: (leftOuter.y + leftInner.y) / 2
+    };
+
+    const eyeDistance = Math.max(40, distance(rightEye, leftEye));
+    const faceWidth = Math.max(eyeDistance * 2.1, distance(faceRight, faceLeft));
+    const centerX = (rightEye.x + leftEye.x) / 2;
+    const centerY = (rightEye.y + leftEye.y) / 2 + eyeDistance * .10;
+    const angle = Math.atan2(leftEye.y - rightEye.y, leftEye.x - rightEye.x);
+    const yaw = clamp((nose.x - centerX) / (eyeDistance * .48), -1, 1);
+    const frameWidth = faceWidth * .82;
+
+    const target = { cx: centerX, cy: centerY, width: frameWidth, angle, yaw };
+    if (!smooth) {
+      smooth = target;
+    } else {
+      smooth.cx = lerp(smooth.cx, target.cx, .32);
+      smooth.cy = lerp(smooth.cy, target.cy, .32);
+      smooth.width = lerp(smooth.width, target.width, .27);
+      smooth.angle = smoothAngle(smooth.angle, target.angle, .28);
+      smooth.yaw = lerp(smooth.yaw, target.yaw, .22);
+    }
+    return smooth;
+  }
+
+  function renderLoop() {
+    if (!active) return;
+    const { width, height } = resizeCanvas();
+    ctx.clearRect(0, 0, width, height);
+
+    if (faceLandmarker && video.readyState >= 2 && video.videoWidth > 0) {
+      try {
+        if (video.currentTime !== lastVideoTime) {
+          lastVideoTime = video.currentTime;
+          const result = faceLandmarker.detectForVideo(video, performance.now());
+          const landmarks = result.faceLandmarks?.[0];
+          if (landmarks) {
+            const fit = estimateFit(landmarks, width, height);
+            drawGlasses(fit);
+            lastFaceAt = performance.now();
+            setStatus("Face detected · Live tracking", true);
+            hint.textContent = Math.abs(fit.yaw) > .55
+              ? "Great — turn slowly to inspect the side profile."
+              : "Move naturally. The frame will follow your face.";
+          }
+        }
+      } catch (error) {
+        console.warn("Virtual try-on frame error:", error);
+      }
+    }
+
+    if (performance.now() - lastFaceAt > 700) {
+      setStatus("Looking for your face…", false);
+      hint.textContent = "Keep your face inside the guide and look straight ahead.";
+      smooth = null;
+    }
+
+    animationId = requestAnimationFrame(renderLoop);
+  }
+
+  async function startExperience() {
+    setLoading("Preparing AI try-on…", "Allow camera access when your browser asks.");
+    try {
+      await Promise.all([ensureLandmarker(), startCamera()]);
+      if (!active) {
+        stopCamera();
+        return;
+      }
+      lastVideoTime = -1;
+      lastFaceAt = 0;
+      hideLoading();
+      setStatus("Camera live · Finding face…", false);
+      cancelAnimationFrame(animationId);
+      renderLoop();
+    } catch (error) {
+      console.error(error);
+      const secureHint = location.protocol === "https:" || location.hostname === "localhost"
+        ? ""
+        : " Open the deployed GitHub Pages HTTPS link.";
+      setLoading(
+        "Camera could not start",
+        `Please allow camera permission and use Chrome, Safari or Edge.${secureHint}`,
+        true
+      );
+      setStatus("Camera unavailable", false);
+    }
+  }
+
+  async function openTryOn(productId) {
+    const selected = products.find(product => product.id === Number(productId)) || products[0];
+    if (!selected) return;
+
+    const productDialog = document.getElementById("productDialog");
+    if (productDialog?.open) productDialog.close();
+
+    updateProductUI(selected);
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
+    active = true;
+    facingMode = "user";
+    video.classList.add("mirrored");
+    await startExperience();
+  }
+
+  function closeTryOn() {
+    active = false;
+    cancelAnimationFrame(animationId);
+    stopCamera();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("no-scroll");
+    hideLoading();
+    setStatus("Ready", false);
+    smooth = null;
+  }
+
+  function drawVideoCover(targetCtx, width, height) {
+    const videoWidth = video.videoWidth || 1;
+    const videoHeight = video.videoHeight || 1;
+    const scale = Math.max(width / videoWidth, height / videoHeight);
+    const drawWidth = videoWidth * scale;
+    const drawHeight = videoHeight * scale;
+    const dx = (width - drawWidth) / 2;
+    const dy = (height - drawHeight) / 2;
+
+    targetCtx.save();
+    if (facingMode === "user") {
+      targetCtx.translate(width, 0);
+      targetCtx.scale(-1, 1);
+    }
+    targetCtx.drawImage(video, dx, dy, drawWidth, drawHeight);
+    targetCtx.restore();
+  }
+
+  function captureLook() {
+    if (!video.videoWidth) {
+      window.toast?.("Camera is not ready yet");
+      return;
+    }
+    const width = Math.round(stage.clientWidth);
+    const height = Math.round(stage.clientHeight);
+    const output = document.createElement("canvas");
+    const pixelRatio = 2;
+    output.width = width * pixelRatio;
+    output.height = height * pixelRatio;
+    const outputCtx = output.getContext("2d");
+    outputCtx.scale(pixelRatio, pixelRatio);
+    drawVideoCover(outputCtx, width, height);
+    outputCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, width, height);
+
+    const gradient = outputCtx.createLinearGradient(0, height - 96, 0, height);
+    gradient.addColorStop(0, "rgba(0,0,0,0)");
+    gradient.addColorStop(1, "rgba(0,0,0,.58)");
+    outputCtx.fillStyle = gradient;
+    outputCtx.fillRect(0, height - 96, width, 96);
+    outputCtx.fillStyle = "white";
+    outputCtx.font = "700 18px Arial, sans-serif";
+    outputCtx.fillText("Optic Homes", 18, height - 36);
+    outputCtx.font = "13px Arial, sans-serif";
+    outputCtx.fillStyle = "rgba(255,255,255,.8)";
+    outputCtx.fillText(currentProduct?.name || "Virtual Try-On", 18, height - 17);
+
+    output.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `optic-homes-${(currentProduct?.name || "try-on").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1200);
+      window.toast?.("Try-on photo saved");
+    }, "image/png");
+  }
+
+  buildCarousel();
+  updateProductUI(currentProduct);
+
+  document.addEventListener("click", event => {
+    const trigger = event.target.closest("[data-tryon]");
+    if (trigger) {
+      event.preventDefault();
+      openTryOn(trigger.dataset.tryon);
+    }
+  });
+
+  carousel.addEventListener("click", event => {
+    const option = event.target.closest(".tryon-frame-option");
+    if (!option) return;
+    const product = products.find(item => item.id === Number(option.dataset.productId));
+    updateProductUI(product);
+    option.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  });
+
+  closeBtn.addEventListener("click", closeTryOn);
+  flipBtn.addEventListener("click", async () => {
+    facingMode = facingMode === "user" ? "environment" : "user";
+    smooth = null;
+    setLoading("Switching camera…", "Please wait a moment.");
+    try {
+      await startCamera();
+      hideLoading();
+      setStatus("Camera live · Finding face…", false);
+    } catch (error) {
+      facingMode = "user";
+      try {
+        await startCamera();
+        hideLoading();
+      } catch {
+        setLoading("Could not switch camera", "Your device may only expose one camera to the browser.", true);
+      }
+    }
+  });
+
+  captureBtn.addEventListener("click", captureLook);
+  addCartBtn.addEventListener("click", () => {
+    if (currentProduct && typeof window.addToCart === "function") {
+      window.addToCart(currentProduct.id);
+      window.toast?.(`${currentProduct.name} added to cart`);
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (active) resizeCanvas();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && active) {
+      stopCamera();
+    } else if (!document.hidden && active) {
+      startExperience();
+    }
+  });
+
+  window.openOpticHomesTryOn = openTryOn;
+})();
 </script>
 
 </body>
