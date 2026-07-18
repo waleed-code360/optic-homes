@@ -1,10 +1,11 @@
-# Optic Homes — Pro Virtual Try-On Fix
+# Optic Homes — Ultimate Try-On Fix
 
-Improvements:
-- cleaner cropped frame overlays
-- reduced blink with stable-fit hold
-- smoother tracking
-- dynamic side temples when user turns left/right
+This version includes:
+- improved transparent real-frame overlays (cleaner background removal)
+- longer stable-hold to reduce blinking
+- always-visible side temples/dandiya with stronger yaw effect
+- per-frame scale tuning
 
 Deploy:
-Replace current index.html with this one and keep .nojekyll in repo root.
+Replace the current index.html in your repo with this file and keep .nojekyll in the root.
+Hard refresh after deploying.
