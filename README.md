@@ -1,13 +1,13 @@
-# Optic Homes — Real Frames Virtual Try-On Test
+# Optic Homes — Real Frame Overlay Fix
 
-This version replaces the demo catalogue with 3 real frame photos supplied by the client.
+This version fixes the virtual try-on so the real uploaded frame images are
+used on the face instead of the stylized AI-drawn frame.
 
 ## Included
-- Frame 01, Frame 02, Frame 03
-- Price shown as "Price on request"
-- Real frame photos embedded directly inside the HTML
-- Virtual Try-On V2 retained
-- Add to Cart / WhatsApp order still works for testing
+- 3 transparent PNG cutouts made from the real uploaded sunglasses photos
+- Each product now has an `overlayImage`
+- Try-on uses the real frame overlay directly
+- Stylized vector frame remains only as a fallback
 
 ## Deploy
-Replace the current GitHub Pages `index.html` with this file and keep `.nojekyll` in the repository root.
+Replace the current `index.html` in your GitHub Pages repo with this file and keep `.nojekyll`.
