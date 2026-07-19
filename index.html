@@ -1392,6 +1392,17 @@ input[type="file"] {
   background: radial-gradient(circle at center, transparent 44%, rgba(0,0,0,.06));
 }
 
+
+/* Free 3D try-on mode */
+.tryon-ai-chip::after {
+  content: " · 3D";
+  font-weight: 900;
+}
+.tryon-engine-notice {
+  border-color: #c9dfcf !important;
+  background: #f1faf3 !important;
+}
+
 </style>
 </head>
 <body>
@@ -1890,7 +1901,7 @@ input[type="file"] {
         <div class="tryon-carousel-wrap">
           <div class="tryon-carousel-label">
             <strong>Switch frame</strong>
-            <span>Real frame styles</span>
+            <span>Choose a real style</span>
           </div>
           <div class="tryon-carousel" id="tryonCarousel" role="list"></div>
         </div>
@@ -2402,6 +2413,125 @@ window.addEventListener("pageshow", function () {
     5: { frame: "#8b2630", edge: "#d1b15f", lens: "rgba(127,68,48,.22)", metal: true, thickness: 0.86 },
     6: { frame: "#101113", edge: "#101113", lens: "rgba(52,58,63,.24)", metal: false, thickness: 1.28 },
     7: { frame: "#0f1014", edge: "#5f6270", lens: "rgba(18,87,207,.28)", metal: true, thickness: 0.88 }
+  };
+
+
+  const frameModels = {
+    1: {
+      shape: "softRound",
+      aspect: 0.74,
+      gap: 0.085,
+      thickness: 0.060,
+      frame: "#49393b",
+      edge: "#1f191a",
+      highlight: "rgba(255,225,210,.42)",
+      lensTop: "rgba(140,78,88,.38)",
+      lensBottom: "rgba(190,120,126,.12)",
+      material: "acetate",
+      bridge: "keyhole",
+      temple: "metalTip",
+      templeColor: "#c7aa70",
+      templeEnd: "#542c31"
+    },
+    2: {
+      shape: "catEye",
+      aspect: 0.62,
+      gap: 0.070,
+      thickness: 0.072,
+      frame: "#111214",
+      edge: "#050506",
+      highlight: "rgba(255,255,255,.30)",
+      lensTop: "rgba(55,63,73,.42)",
+      lensBottom: "rgba(92,102,115,.13)",
+      material: "acetate",
+      bridge: "standard",
+      temple: "acetate",
+      templeColor: "#121315",
+      templeEnd: "#121315"
+    },
+    3: {
+      shape: "rectangle",
+      aspect: 0.56,
+      gap: 0.065,
+      thickness: 0.078,
+      frame: "#b87930",
+      edge: "#74461d",
+      highlight: "rgba(255,215,140,.45)",
+      lensTop: "rgba(94,59,31,.40)",
+      lensBottom: "rgba(153,100,52,.13)",
+      material: "transparentAcetate",
+      bridge: "standard",
+      temple: "wideAcetate",
+      templeColor: "#ad6f2b",
+      templeEnd: "#7d4b1d"
+    },
+    4: {
+      shape: "catEye",
+      aspect: 0.60,
+      gap: 0.062,
+      thickness: 0.052,
+      frame: "#171719",
+      edge: "#080809",
+      highlight: "rgba(255,255,255,.34)",
+      lensTop: "rgba(72,53,91,.43)",
+      lensBottom: "rgba(120,90,145,.12)",
+      material: "metal",
+      bridge: "slim",
+      temple: "slim",
+      templeColor: "#1a1a1c",
+      templeEnd: "#171719",
+      accent: "#c1a354"
+    },
+    5: {
+      shape: "round",
+      aspect: 0.78,
+      gap: 0.078,
+      thickness: 0.048,
+      frame: "#7d2630",
+      edge: "#3d1419",
+      highlight: "rgba(255,210,205,.38)",
+      lensTop: "rgba(105,48,36,.46)",
+      lensBottom: "rgba(165,94,70,.13)",
+      material: "metal",
+      bridge: "slim",
+      temple: "metalTip",
+      templeColor: "#8a2932",
+      templeEnd: "#641c24",
+      accent: "#d1b05f"
+    },
+    6: {
+      shape: "powerSquare",
+      aspect: 0.63,
+      gap: 0.050,
+      thickness: 0.094,
+      frame: "#101113",
+      edge: "#050506",
+      highlight: "rgba(255,255,255,.25)",
+      lensTop: "rgba(38,48,54,.44)",
+      lensBottom: "rgba(65,76,82,.14)",
+      material: "acetate",
+      bridge: "keyhole",
+      temple: "shield",
+      templeColor: "#101113",
+      templeEnd: "#101113"
+    },
+    7: {
+      shape: "aviator",
+      aspect: 0.76,
+      gap: 0.070,
+      thickness: 0.040,
+      frame: "#111318",
+      edge: "#040508",
+      highlight: "rgba(255,255,255,.32)",
+      lensTop: "rgba(15,54,152,.58)",
+      lensBottom: "rgba(25,120,230,.23)",
+      material: "metal",
+      bridge: "double",
+      temple: "slim",
+      templeColor: "#111318",
+      templeEnd: "#111318",
+      accent: "#5c616d"
+    }
   };
 
   const formatCurrency = (value) => (value == null ? "Price on request" : `PKR ${Number(value).toLocaleString("en-PK")}`);
@@ -3007,117 +3137,353 @@ window.addEventListener("pageshow", function () {
     return tryOnImageCache[product.id];
   }
 
-  function drawStylizedFallback(target) {
-    if (!currentProduct) return;
-    const style = frameStyles[currentProduct.id] || frameStyles[1];
-    const shape = currentProduct.shape || "Square";
-    const sizeFactor = Number(scaleControl.value) / 100;
-    const verticalOffset = Number(offsetControl.value);
 
-    const width = target.width * sizeFactor;
-    const heightRatios = {
-      Round: .38, Oval: .32, Rectangle: .30, Square: .34,
-      "Cat Eye": .34, Aviator: .42, Wrap: .30
+  function modelLensPath(model, centerX, centerY, width, height, side) {
+    const x = centerX - width / 2;
+    const y = centerY - height / 2;
+    const path = new Path2D();
+
+    if (model.shape === "round") {
+      path.ellipse(centerX, centerY, width / 2, height / 2, 0, 0, Math.PI * 2);
+    } else if (model.shape === "softRound") {
+      path.moveTo(x + width * .13, y + height * .08);
+      path.bezierCurveTo(
+        x + width * .02, y + height * .24,
+        x + width * .02, y + height * .75,
+        x + width * .18, y + height * .91
+      );
+      path.bezierCurveTo(
+        x + width * .36, y + height * 1.03,
+        x + width * .78, y + height * .98,
+        x + width * .91, y + height * .77
+      );
+      path.bezierCurveTo(
+        x + width * 1.02, y + height * .54,
+        x + width * .97, y + height * .22,
+        x + width * .82, y + height * .09
+      );
+      path.bezierCurveTo(
+        x + width * .64, y - height * .02,
+        x + width * .29, y - height * .02,
+        x + width * .13, y + height * .08
+      );
+    } else if (model.shape === "catEye") {
+      const outerX = side < 0 ? x : x + width;
+      const innerX = side < 0 ? x + width : x;
+      path.moveTo(innerX, y + height * .22);
+      path.bezierCurveTo(
+        centerX, y - height * .03,
+        outerX + side * width * .07, y - height * .09,
+        outerX + side * width * .04, y + height * .18
+      );
+      path.bezierCurveTo(
+        outerX + side * width * .07, y + height * .52,
+        outerX - side * width * .10, y + height * .85,
+        centerX, y + height * .96
+      );
+      path.bezierCurveTo(
+        innerX - side * width * .10, y + height * .88,
+        innerX - side * width * .05, y + height * .52,
+        innerX, y + height * .22
+      );
+    } else if (model.shape === "aviator") {
+      path.moveTo(x + width * .10, y + height * .08);
+      path.bezierCurveTo(
+        centerX, y - height * .04,
+        x + width * .91, y + height * .02,
+        x + width * .96, y + height * .24
+      );
+      path.bezierCurveTo(
+        x + width * 1.00, y + height * .57,
+        x + width * .73, y + height * .98,
+        centerX, y + height
+      );
+      path.bezierCurveTo(
+        x + width * .24, y + height * .94,
+        x - width * .01, y + height * .60,
+        x + width * .10, y + height * .08
+      );
+    } else {
+      const radius = model.shape === "powerSquare" ? height * .12 : height * .20;
+      return roundedRectPath(
+        x,
+        y + (model.shape === "rectangle" ? height * .05 : 0),
+        width,
+        height * (model.shape === "rectangle" ? .90 : 1),
+        radius
+      );
+    }
+
+    path.closePath();
+    return path;
+  }
+
+  function drawFree3DTemples(model, width, height, lensCenters, yaw, frameThickness) {
+    const nearSide = yaw >= 0 ? 1 : -1;
+    const turn = Math.abs(yaw);
+    const baseLength = width * (
+      model.temple === "shield" ? .37 :
+      model.temple === "wideAcetate" ? .42 :
+      model.temple === "metalTip" ? .44 : .40
+    );
+    const nearLength = baseLength * (1 + turn * .42);
+    const farLength = baseLength * (.70 - turn * .12);
+    const bodyWidth = frameThickness * (
+      model.temple === "shield" ? 1.22 :
+      model.temple === "wideAcetate" ? 1.10 :
+      model.temple === "acetate" ? .90 : .54
+    );
+    const hingeY = -height * .07;
+
+    const drawTemple = (side, length, alpha, near) => {
+      const hingeX = side < 0 ? lensCenters.leftOuter : lensCenters.rightOuter;
+      const endX = hingeX + side * length;
+      const endY = hingeY + height * (near ? .35 : .22) + turn * height * .08;
+      const controlX = hingeX + side * length * .54;
+      const controlY = hingeY + height * .03;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = "rgba(0,0,0,.28)";
+      ctx.shadowBlur = near ? 9 : 5;
+      ctx.shadowOffsetY = 3;
+
+      const templeGradient = ctx.createLinearGradient(hingeX, hingeY, endX, endY);
+      templeGradient.addColorStop(0, model.accent || model.templeColor);
+      templeGradient.addColorStop(.14, model.templeColor);
+      templeGradient.addColorStop(.76, model.templeColor);
+      templeGradient.addColorStop(1, model.templeEnd);
+
+      ctx.strokeStyle = templeGradient;
+      ctx.lineWidth = bodyWidth;
+      ctx.beginPath();
+      ctx.moveTo(hingeX, hingeY);
+      ctx.quadraticCurveTo(controlX, controlY, endX, endY);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(255,255,255,.20)";
+      ctx.lineWidth = Math.max(1, bodyWidth * .18);
+      ctx.beginPath();
+      ctx.moveTo(hingeX + side * frameThickness * .16, hingeY - bodyWidth * .10);
+      ctx.quadraticCurveTo(
+        controlX,
+        controlY - bodyWidth * .18,
+        endX - side * bodyWidth * .15,
+        endY - bodyWidth * .16
+      );
+      ctx.stroke();
+
+      // curved ear tip
+      ctx.strokeStyle = model.templeEnd;
+      ctx.lineWidth = Math.max(2.2, bodyWidth * .88);
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.quadraticCurveTo(
+        endX + side * width * .055,
+        endY + height * .04,
+        endX + side * width * .072,
+        endY + height * .15
+      );
+      ctx.stroke();
+
+      // hinge block
+      ctx.fillStyle = model.accent || model.templeColor;
+      ctx.globalAlpha = Math.min(1, alpha + .10);
+      ctx.fillRect(
+        hingeX - (side < 0 ? frameThickness * .22 : frameThickness * .58),
+        hingeY - bodyWidth * .30,
+        frameThickness * .80,
+        bodyWidth * .60
+      );
+
+      ctx.restore();
     };
-    const height = width * (heightRatios[shape] || .34);
-    const yaw = clamp(target.yaw, -1, 1);
-    const frameThickness = clamp(height * .075 * style.thickness, 3, 15);
-    const gap = width * .055;
-    const lensWidth = (width - gap) / 2;
-    const leftCenter = -(gap / 2 + lensWidth / 2);
-    const rightCenter = gap / 2 + lensWidth / 2;
-    const lensY = verticalOffset;
+
+    drawTemple(nearSide, nearLength, .90, true);
+    drawTemple(-nearSide, farLength, .24 + turn * .12, false);
+  }
+
+  function drawFree3DFrame(target) {
+    if (!currentProduct) return;
+
+    const model = frameModels[currentProduct.id] || frameModels[1];
+    const sizeFactor = Number(scaleControl.value) / 100;
+    const manualVertical = Number(offsetControl.value);
+    const yaw = clamp(target.yaw || 0, -1, 1);
+    const angle = normalizeTiltAngle(target.angle || 0);
+
+    const width = target.width * sizeFactor * (currentProduct.frameScale || 1);
+    const baseHeight = width * model.aspect * .50;
+    const gap = width * model.gap;
+    const lensBaseWidth = (width - gap) / 2;
+    const frameThickness = clamp(baseHeight * model.thickness, 3.0, 13);
+
+    // Perspective: near lens grows, far lens compresses.
+    const perspective = Math.abs(yaw);
+    const nearSide = yaw >= 0 ? 1 : -1;
+    const leftScale = nearSide < 0 ? 1 + perspective * .11 : 1 - perspective * .12;
+    const rightScale = nearSide > 0 ? 1 + perspective * .11 : 1 - perspective * .12;
+    const centerShift = yaw * width * .035;
+
+    const leftWidth = lensBaseWidth * leftScale;
+    const rightWidth = lensBaseWidth * rightScale;
+    const leftX = -gap / 2 - leftWidth / 2 + centerShift;
+    const rightX = gap / 2 + rightWidth / 2 + centerShift;
+    const lensY = manualVertical + baseHeight * (currentProduct.yOffset || 0);
+
+    const leftPath = modelLensPath(model, leftX, lensY, leftWidth, baseHeight, -1);
+    const rightPath = modelLensPath(model, rightX, lensY, rightWidth, baseHeight, 1);
+    const lensCenters = {
+      leftOuter: leftX - leftWidth / 2 + frameThickness * .20,
+      rightOuter: rightX + rightWidth / 2 - frameThickness * .20
+    };
 
     ctx.save();
     ctx.translate(target.cx, target.cy);
-    ctx.rotate(target.angle);
-    ctx.scale(1 - Math.abs(yaw) * .055, 1);
+    ctx.rotate(angle);
 
+    // Real temples are drawn behind the front rims.
+    drawFree3DTemples(model, width, baseHeight, lensCenters, yaw, frameThickness);
+
+    // Depth shadow.
     ctx.save();
-    ctx.translate(yaw * width * .025, height * .055);
-    ctx.shadowColor = "rgba(0,0,0,.34)";
-    ctx.shadowBlur = frameThickness * 1.8;
-    ctx.strokeStyle = "rgba(0,0,0,.18)";
-    ctx.lineWidth = frameThickness * 1.2;
-    const shadowLeft = lensPath(shape, leftCenter, lensY, lensWidth, height, -1);
-    const shadowRight = lensPath(shape, rightCenter, lensY, lensWidth, height, 1);
-    ctx.stroke(shadowLeft);
-    ctx.stroke(shadowRight);
+    ctx.translate(yaw * frameThickness * .55, frameThickness * .48);
+    ctx.shadowColor = "rgba(0,0,0,.38)";
+    ctx.shadowBlur = frameThickness * 1.45;
+    ctx.strokeStyle = "rgba(0,0,0,.28)";
+    ctx.lineWidth = frameThickness * 1.22;
+    ctx.stroke(leftPath);
+    ctx.stroke(rightPath);
     ctx.restore();
 
-    const leftPath = lensPath(shape, leftCenter, lensY, lensWidth, height, -1);
-    const rightPath = lensPath(shape, rightCenter, lensY, lensWidth, height, 1);
-
-    const lensGradient = ctx.createLinearGradient(0, -height / 2, 0, height / 2);
-    lensGradient.addColorStop(0, style.lens);
-    lensGradient.addColorStop(1, "rgba(30,30,30,0.05)");
+    // Lenses.
+    const lensGradient = ctx.createLinearGradient(0, lensY - baseHeight / 2, 0, lensY + baseHeight / 2);
+    lensGradient.addColorStop(0, model.lensTop);
+    lensGradient.addColorStop(1, model.lensBottom);
     ctx.fillStyle = lensGradient;
     ctx.fill(leftPath);
     ctx.fill(rightPath);
 
-    const frameGradient = ctx.createLinearGradient(-width / 2, -height / 2, width / 2, height / 2);
-    frameGradient.addColorStop(0, style.edge);
-    frameGradient.addColorStop(.28, style.frame);
-    frameGradient.addColorStop(.72, style.frame);
-    frameGradient.addColorStop(1, style.edge);
+    // Subtle lens reflections.
+    [leftPath, rightPath].forEach((path, index) => {
+      const cx = index === 0 ? leftX : rightX;
+      const lw = index === 0 ? leftWidth : rightWidth;
+      ctx.save();
+      ctx.clip(path);
+      const reflection = ctx.createLinearGradient(
+        cx - lw * .45,
+        lensY - baseHeight * .30,
+        cx + lw * .32,
+        lensY + baseHeight * .30
+      );
+      reflection.addColorStop(0, "rgba(255,255,255,0)");
+      reflection.addColorStop(.42, "rgba(255,255,255,.04)");
+      reflection.addColorStop(.52, "rgba(255,255,255,.30)");
+      reflection.addColorStop(.64, "rgba(255,255,255,.04)");
+      reflection.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = reflection;
+      ctx.fillRect(cx - lw, lensY - baseHeight, lw * 2, baseHeight * 2);
+      ctx.restore();
+    });
+
+    // Back edge: creates frame thickness.
+    ctx.strokeStyle = model.edge;
+    ctx.lineWidth = frameThickness * 1.18;
+    ctx.lineJoin = "round";
+    ctx.stroke(leftPath);
+    ctx.stroke(rightPath);
+
+    // Main material stroke.
+    const frameGradient = ctx.createLinearGradient(-width / 2, -baseHeight / 2, width / 2, baseHeight / 2);
+    frameGradient.addColorStop(0, model.highlight);
+    frameGradient.addColorStop(.12, model.frame);
+    frameGradient.addColorStop(.62, model.frame);
+    frameGradient.addColorStop(1, model.edge);
     ctx.strokeStyle = frameGradient;
     ctx.lineWidth = frameThickness;
     ctx.stroke(leftPath);
     ctx.stroke(rightPath);
 
+    // Material highlight.
+    ctx.globalAlpha = .48;
+    ctx.strokeStyle = model.highlight;
+    ctx.lineWidth = Math.max(1, frameThickness * .18);
+    ctx.stroke(leftPath);
+    ctx.stroke(rightPath);
+    ctx.globalAlpha = 1;
+
+    // Bridge.
+    const bridgeY = lensY - baseHeight * (
+      model.bridge === "keyhole" ? .03 :
+      model.bridge === "double" ? .18 : .09
+    );
+    ctx.strokeStyle = model.accent || model.frame;
+    ctx.lineWidth = model.material === "metal"
+      ? Math.max(2.2, frameThickness * .42)
+      : Math.max(3, frameThickness * .72);
+    ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(-gap / 2 - frameThickness * .12, lensY - height * .06);
-    ctx.bezierCurveTo(-gap * .25, lensY - height * .18, gap * .25, lensY - height * .18, gap / 2 + frameThickness * .12, lensY - height * .06);
+
+    if (model.bridge === "keyhole") {
+      ctx.moveTo(leftX + leftWidth / 2 - frameThickness * .12, bridgeY);
+      ctx.bezierCurveTo(
+        -gap * .34, bridgeY - baseHeight * .14,
+        gap * .34, bridgeY - baseHeight * .14,
+        rightX - rightWidth / 2 + frameThickness * .12,
+        bridgeY
+      );
+    } else {
+      ctx.moveTo(leftX + leftWidth / 2 - frameThickness * .10, bridgeY);
+      ctx.bezierCurveTo(
+        -gap * .30, bridgeY - baseHeight * .08,
+        gap * .30, bridgeY - baseHeight * .08,
+        rightX - rightWidth / 2 + frameThickness * .10,
+        bridgeY
+      );
+    }
     ctx.stroke();
 
+    if (model.bridge === "double") {
+      ctx.lineWidth = Math.max(1.8, frameThickness * .30);
+      ctx.beginPath();
+      ctx.moveTo(leftX + leftWidth * .34, lensY - baseHeight * .41);
+      ctx.quadraticCurveTo(0, lensY - baseHeight * .54, rightX - rightWidth * .34, lensY - baseHeight * .41);
+      ctx.stroke();
+    }
+
+    // Hinges.
+    ctx.fillStyle = model.accent || model.edge;
+    const hingeRadius = Math.max(2.2, frameThickness * .25);
+    ctx.beginPath();
+    ctx.arc(lensCenters.leftOuter, lensY - baseHeight * .08, hingeRadius, 0, Math.PI * 2);
+    ctx.arc(lensCenters.rightOuter, lensY - baseHeight * .08, hingeRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Nose pads on metal frames.
+    if (model.material === "metal") {
+      ctx.strokeStyle = "rgba(230,220,200,.78)";
+      ctx.lineWidth = Math.max(1.1, frameThickness * .16);
+      ctx.beginPath();
+      ctx.moveTo(-gap * .28, lensY + baseHeight * .02);
+      ctx.lineTo(-gap * .16, lensY + baseHeight * .22);
+      ctx.moveTo(gap * .28, lensY + baseHeight * .02);
+      ctx.lineTo(gap * .16, lensY + baseHeight * .22);
+      ctx.stroke();
+    }
+
     ctx.restore();
+  }
+
+  function drawStylizedFallback(target) {
+    drawFree3DFrame(target);
   }
 
 
 
   function drawGlasses(target) {
-    if (!currentProduct) return;
-
-    const overlay = getTryOnImage(currentProduct);
-    if (!overlay || !overlay.complete || !overlay.naturalWidth) {
-      drawStylizedFallback(target);
-      return;
-    }
-
-    const sizeFactor = Number(scaleControl.value) / 100;
-    const verticalOffset = Number(offsetControl.value);
-    const productScale = currentProduct.frameScale || 1;
-    const productYOffset = currentProduct.yOffset || 0;
-
-    const baseWidth = target.width * sizeFactor * productScale;
-    const aspect = overlay.naturalHeight / overlay.naturalWidth;
-    const baseHeight = baseWidth * aspect;
-    const yaw = clamp(target.yaw, -1, 1);
-    const angle = normalizeTiltAngle(target.angle || 0);
-
-    ctx.save();
-    ctx.translate(target.cx, target.cy + verticalOffset + baseHeight * productYOffset);
-    ctx.rotate(angle);
-
-    const xScale = 1 - Math.abs(yaw) * 0.05;
-    ctx.scale(xScale, 1);
-
-    drawTempleArms(target, baseWidth, baseHeight, yaw, currentProduct);
-
-    ctx.shadowColor = "rgba(0,0,0,.16)";
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 3;
-    ctx.globalAlpha = 1;
-
-    ctx.drawImage(
-      overlay,
-      -baseWidth / 2,
-      -baseHeight / 2,
-      baseWidth,
-      baseHeight
-    );
-
-    ctx.restore();
+    drawFree3DFrame(target);
   }
 
 
@@ -3216,7 +3582,7 @@ window.addEventListener("pageshow", function () {
             drawnThisFrame = true;
             setStatus("AI locked · Move naturally", true);
             hint.textContent = Math.abs(fit.yaw) > .35
-              ? "Turn left or right and the side temples will appear."
+              ? "Turn left or right to inspect the 3D side arms."
               : "Perfect. Move your head and the frame will follow more smoothly.";
           }
         }
@@ -3234,7 +3600,7 @@ window.addEventListener("pageshow", function () {
         drawnThisFrame = true;
         setStatus("AI locked · Smooth tracking", true);
         hint.textContent = Math.abs(fit.yaw) > .35
-          ? "Turn left or right and the side temples will appear."
+          ? "Turn left or right to inspect the 3D side arms."
           : "Perfect. Move naturally to check the fit.";
       }
     }
@@ -3323,7 +3689,7 @@ window.addEventListener("pageshow", function () {
       setStatus("AI ready · Finding face…", false);
       autoFitBtn.classList.add("active");
       autoFitBtn.disabled = false;
-      hint.textContent = "Look straight ahead. The real frame will appear once tracking locks on your face.";
+      hint.textContent = "Look straight ahead. The free 3D frame will appear once tracking locks on your face.";
     } catch (aiError) {
       if (token !== startupToken || !active) return;
       console.error("All AI tracking engines failed:", aiError);
@@ -3338,7 +3704,7 @@ window.addEventListener("pageshow", function () {
       autoFitBtn.disabled = true;
       showEngineNotice(
         "Live camera is working",
-        "The AI tracking files could not load from the network. Manual fitting is active, so you can drag, resize and photograph the frame. Refreshing on a stronger connection will retry both AI engines."
+        "The AI tracking files could not load from the network. Manual 3D fitting is active, so you can drag, resize and photograph the frame. Refreshing on a stronger connection will retry both AI engines."
       );
     }
   }
