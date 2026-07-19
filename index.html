@@ -1403,6 +1403,26 @@ input[type="file"] {
   background: #f1faf3 !important;
 }
 
+
+/* ===== Genuine Three.js WebGL Overlay ===== */
+#tryonThreeCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: transparent;
+}
+#tryonCanvas {
+  z-index: 2;
+}
+.tryon-ai-chip::after {
+  content: " · THREE.JS";
+  font-size: 8px;
+  letter-spacing: .04em;
+}
+
 </style>
 </head>
 <body>
@@ -1837,7 +1857,8 @@ input[type="file"] {
 
       <div class="tryon-stage" id="tryonStage">
         <video id="tryonVideo" playsinline muted autoplay aria-label="Live camera preview"></video>
-        <canvas id="tryonCanvas" aria-label="Virtual glasses overlay"></canvas>
+        <canvas id="tryonThreeCanvas" aria-label="Three-dimensional virtual glasses overlay"></canvas>
+        <canvas id="tryonCanvas" aria-label="Virtual glasses fallback overlay"></canvas>
 
         <div class="tryon-loading" id="tryonLoading">
           <div class="tryon-spinner" aria-hidden="true"></div>
@@ -2348,6 +2369,7 @@ window.addEventListener("pageshow", function () {
   const modal = document.getElementById("tryonModal");
   const stage = document.getElementById("tryonStage");
   const video = document.getElementById("tryonVideo");
+  const threeCanvas = document.getElementById("tryonThreeCanvas");
   const canvas = document.getElementById("tryonCanvas");
   const ctx = canvas.getContext("2d");
   const closeBtn = document.getElementById("tryonClose");
@@ -2400,6 +2422,25 @@ window.addEventListener("pageshow", function () {
   let draggingManual = false;
   let dragOffset = { x: 0, y: 0 };
   let cameraReady = false;
+
+  const THREE_VERSION = "0.184.0";
+  const THREE_MODULES = [
+    `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`,
+    `https://unpkg.com/three@${THREE_VERSION}/build/three.module.js`
+  ];
+
+  let THREE = null;
+  let threeRenderer = null;
+  let threeScene = null;
+  let threeCamera = null;
+  let threeFrameRoot = null;
+  let threeReadyPromise = null;
+  let threeReady = false;
+  let threeFailed = false;
+  let threeStageWidth = 1;
+  let threeStageHeight = 1;
+  let threeModelProductId = null;
+
   let startupToken = 0;
   let lastStableFit = null;
   let lastStableAt = 0;
@@ -2647,6 +2688,508 @@ window.addEventListener("pageshow", function () {
   }
 
 
+
+  const THREE_FRAME_SPECS = {
+    1: {
+      shape: "softRound", totalWidth: 2.18, lensHeight: .72, gap: .17, rim: .072,
+      frameColor: 0x49383b, edgeColor: 0x21191b, accentColor: 0xc7a96f,
+      lensColor: 0x85555d, lensOpacity: .30, material: "acetate",
+      bridge: "keyhole", temple: "metalTip", templeColor: 0xc6a96f, templeTip: 0x542c31
+    },
+    2: {
+      shape: "catEye", totalWidth: 2.22, lensHeight: .66, gap: .14, rim: .084,
+      frameColor: 0x121315, edgeColor: 0x050506, accentColor: 0xa88945,
+      lensColor: 0x414750, lensOpacity: .34, material: "acetate",
+      bridge: "standard", temple: "acetate", templeColor: 0x121315, templeTip: 0x121315
+    },
+    3: {
+      shape: "rectangle", totalWidth: 2.25, lensHeight: .61, gap: .13, rim: .092,
+      frameColor: 0xb87930, edgeColor: 0x74451d, accentColor: 0xc99b5a,
+      lensColor: 0x704725, lensOpacity: .31, material: "transparent",
+      bridge: "standard", temple: "wide", templeColor: 0xaa6c29, templeTip: 0x7c491b
+    },
+    4: {
+      shape: "catEye", totalWidth: 2.20, lensHeight: .64, gap: .13, rim: .058,
+      frameColor: 0x18181a, edgeColor: 0x070708, accentColor: 0xb89b4f,
+      lensColor: 0x554268, lensOpacity: .34, material: "metal",
+      bridge: "slim", temple: "slim", templeColor: 0x19191b, templeTip: 0x171719
+    },
+    5: {
+      shape: "round", totalWidth: 2.16, lensHeight: .78, gap: .16, rim: .055,
+      frameColor: 0x812730, edgeColor: 0x3d1419, accentColor: 0xd1b05f,
+      lensColor: 0x693d31, lensOpacity: .36, material: "metal",
+      bridge: "slim", temple: "metalTip", templeColor: 0x872a33, templeTip: 0x621c23
+    },
+    6: {
+      shape: "powerSquare", totalWidth: 2.32, lensHeight: .67, gap: .10, rim: .110,
+      frameColor: 0x101113, edgeColor: 0x040405, accentColor: 0x242528,
+      lensColor: 0x343d42, lensOpacity: .35, material: "acetate",
+      bridge: "keyhole", temple: "shield", templeColor: 0x101113, templeTip: 0x101113
+    },
+    7: {
+      shape: "aviator", totalWidth: 2.25, lensHeight: .79, gap: .14, rim: .052,
+      frameColor: 0x111318, edgeColor: 0x030407, accentColor: 0x616775,
+      lensColor: 0x124fd1, lensOpacity: .47, material: "metal",
+      bridge: "double", temple: "slim", templeColor: 0x111318, templeTip: 0x101216
+    }
+  };
+
+  async function ensureThreeRenderer() {
+    if (threeReady && threeRenderer) return threeRenderer;
+    if (threeReadyPromise) return threeReadyPromise;
+
+    threeReadyPromise = (async () => {
+      let lastError = null;
+
+      for (const moduleUrl of THREE_MODULES) {
+        try {
+          THREE = await withTimeout(import(moduleUrl), 18000, "Three.js");
+          break;
+        } catch (error) {
+          lastError = error;
+          console.warn("Three.js CDN failed:", moduleUrl, error);
+        }
+      }
+
+      if (!THREE) {
+        threeFailed = true;
+        throw lastError || new Error("Three.js could not be loaded.");
+      }
+
+      threeRenderer = new THREE.WebGLRenderer({
+        canvas: threeCanvas,
+        alpha: true,
+        antialias: true,
+        premultipliedAlpha: true,
+        preserveDrawingBuffer: true,
+        powerPreference: "high-performance"
+      });
+      threeRenderer.setClearColor(0x000000, 0);
+      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      if ("outputColorSpace" in threeRenderer && THREE.SRGBColorSpace) {
+        threeRenderer.outputColorSpace = THREE.SRGBColorSpace;
+      }
+
+      threeScene = new THREE.Scene();
+      threeCamera = new THREE.OrthographicCamera(-.5, .5, .5, -.5, .1, 4000);
+      threeCamera.position.set(0, 0, 1000);
+      threeCamera.lookAt(0, 0, 0);
+
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x24332c, 2.15);
+      threeScene.add(hemi);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 3.1);
+      keyLight.position.set(-3, 4, 8);
+      threeScene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0xb9d5ff, 1.35);
+      fillLight.position.set(4, 1, 5);
+      threeScene.add(fillLight);
+
+      threeReady = true;
+      threeFailed = false;
+      resizeThreeRenderer(
+        Math.max(1, Math.round(stage.clientWidth)),
+        Math.max(1, Math.round(stage.clientHeight))
+      );
+      rebuildThreeProduct(currentProduct);
+      return threeRenderer;
+    })();
+
+    try {
+      return await threeReadyPromise;
+    } catch (error) {
+      threeReadyPromise = null;
+      throw error;
+    }
+  }
+
+  function resizeThreeRenderer(width, height) {
+    if (!threeRenderer || !threeCamera) return;
+    threeStageWidth = width;
+    threeStageHeight = height;
+
+    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    threeRenderer.setSize(width, height, false);
+
+    threeCamera.left = -width / 2;
+    threeCamera.right = width / 2;
+    threeCamera.top = height / 2;
+    threeCamera.bottom = -height / 2;
+    threeCamera.near = .1;
+    threeCamera.far = 4000;
+    threeCamera.updateProjectionMatrix();
+  }
+
+  function disposeThreeObject(object) {
+    if (!object) return;
+    object.traverse(child => {
+      if (child.geometry) child.geometry.dispose?.();
+      if (child.material) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach(material => material.dispose?.());
+      }
+    });
+    object.removeFromParent();
+  }
+
+  function superellipsePoint(theta, rx, ry, exponent) {
+    const c = Math.cos(theta);
+    const s = Math.sin(theta);
+    return new THREE.Vector2(
+      Math.sign(c) * Math.pow(Math.abs(c), 2 / exponent) * rx,
+      Math.sign(s) * Math.pow(Math.abs(s), 2 / exponent) * ry
+    );
+  }
+
+  function makeLensPoints(shape, rx, ry, side, inset = 0) {
+    const count = 80;
+    const adjustedRx = Math.max(.05, rx - inset);
+    const adjustedRy = Math.max(.05, ry - inset);
+    const points = [];
+
+    for (let index = 0; index < count; index += 1) {
+      const theta = index / count * Math.PI * 2;
+      let point;
+
+      if (shape === "round") {
+        point = superellipsePoint(theta, adjustedRx, adjustedRy, 2);
+      } else if (shape === "softRound") {
+        point = superellipsePoint(theta, adjustedRx, adjustedRy, 2.65);
+      } else if (shape === "rectangle") {
+        point = superellipsePoint(theta, adjustedRx, adjustedRy, 4.6);
+      } else if (shape === "powerSquare") {
+        point = superellipsePoint(theta, adjustedRx, adjustedRy, 6.7);
+      } else if (shape === "catEye") {
+        point = superellipsePoint(theta, adjustedRx, adjustedRy, 3.1);
+        const normalizedX = point.x / adjustedRx;
+        const normalizedY = point.y / adjustedRy;
+        const outerness = Math.max(0, side * normalizedX);
+        const topness = Math.max(0, normalizedY);
+        point.x += side * adjustedRx * .075 * outerness * outerness;
+        point.y += adjustedRy * .18 * outerness * outerness * topness;
+      } else if (shape === "aviator") {
+        point = superellipsePoint(theta, adjustedRx, adjustedRy, 2.35);
+        const normalizedX = Math.abs(point.x / adjustedRx);
+        if (point.y < 0) {
+          point.y -= adjustedRy * .18 * (1 - normalizedX);
+        }
+        if (point.y > 0) {
+          point.y *= .88;
+        }
+      } else {
+        point = superellipsePoint(theta, adjustedRx, adjustedRy, 3);
+      }
+
+      points.push(point);
+    }
+
+    return points;
+  }
+
+  function shapeFromPoints(points, reverse = false) {
+    const arranged = reverse ? [...points].reverse() : points;
+    const shape = reverse ? new THREE.Path() : new THREE.Shape();
+    shape.moveTo(arranged[0].x, arranged[0].y);
+    for (let index = 1; index < arranged.length; index += 1) {
+      shape.lineTo(arranged[index].x, arranged[index].y);
+    }
+    shape.closePath();
+    return shape;
+  }
+
+  function makeRimGeometry(spec, side, lensWidth, lensHeight) {
+    const rx = lensWidth / 2;
+    const ry = lensHeight / 2;
+    const outerPoints = makeLensPoints(spec.shape, rx, ry, side, 0);
+    const innerPoints = makeLensPoints(spec.shape, rx, ry, side, spec.rim);
+
+    const rimShape = shapeFromPoints(outerPoints);
+    rimShape.holes.push(shapeFromPoints(innerPoints, true));
+
+    const depth = spec.material === "acetate" || spec.material === "transparent" ? .105 : .068;
+    const geometry = new THREE.ExtrudeGeometry(rimShape, {
+      depth,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      steps: 1,
+      bevelSize: spec.material === "metal" ? .009 : .016,
+      bevelThickness: spec.material === "metal" ? .009 : .015,
+      curveSegments: 16
+    });
+    geometry.translate(0, 0, -depth / 2);
+    geometry.computeVertexNormals();
+    return geometry;
+  }
+
+  function makeLensGeometry(spec, side, lensWidth, lensHeight) {
+    const inset = spec.rim * .82;
+    const points = makeLensPoints(
+      spec.shape,
+      lensWidth / 2,
+      lensHeight / 2,
+      side,
+      inset
+    );
+    return new THREE.ShapeGeometry(shapeFromPoints(points));
+  }
+
+  function makeTube(points, radius, material, tubularSegments = 30) {
+    const curve = new THREE.CatmullRomCurve3(
+      points.map(point => new THREE.Vector3(point[0], point[1], point[2])),
+      false,
+      "catmullrom",
+      .32
+    );
+    const geometry = new THREE.TubeGeometry(curve, tubularSegments, radius, 10, false);
+    return new THREE.Mesh(geometry, material);
+  }
+
+  function addThreeTemples(root, spec, outerX, lensHeight) {
+    const thickness = (
+      spec.temple === "shield" ? .072 :
+      spec.temple === "wide" ? .064 :
+      spec.temple === "acetate" ? .055 :
+      spec.temple === "metalTip" ? .032 : .027
+    );
+
+    const templeMaterial = new THREE.MeshStandardMaterial({
+      color: spec.templeColor,
+      metalness: spec.temple === "slim" || spec.temple === "metalTip" ? .62 : .12,
+      roughness: spec.temple === "slim" || spec.temple === "metalTip" ? .24 : .38,
+      transparent: true,
+      opacity: 1
+    });
+
+    const tipMaterial = new THREE.MeshStandardMaterial({
+      color: spec.templeTip,
+      metalness: .06,
+      roughness: .44,
+      transparent: true,
+      opacity: 1
+    });
+
+    [-1, 1].forEach(side => {
+      const templeGroup = new THREE.Group();
+      templeGroup.userData.side = side;
+
+      const hingeX = side * outerX;
+      const arm = makeTube([
+        [hingeX, lensHeight * .08, -.015],
+        [hingeX + side * .18, lensHeight * .07, -.20],
+        [hingeX + side * .32, lensHeight * .03, -.58],
+        [hingeX + side * .39, -lensHeight * .08, -1.13]
+      ], thickness, templeMaterial, 34);
+      templeGroup.add(arm);
+
+      const tip = makeTube([
+        [hingeX + side * .39, -lensHeight * .08, -1.13],
+        [hingeX + side * .43, -lensHeight * .15, -1.36],
+        [hingeX + side * .42, -lensHeight * .27, -1.54]
+      ], thickness * .92, tipMaterial, 18);
+      templeGroup.add(tip);
+
+      root.add(templeGroup);
+
+      if (!root.userData.templeGroups) root.userData.templeGroups = [];
+      root.userData.templeGroups.push(templeGroup);
+    });
+  }
+
+  function rebuildThreeProduct(product) {
+    if (!threeReady || !threeScene || !product) return;
+    if (threeModelProductId === product.id && threeFrameRoot) return;
+
+    disposeThreeObject(threeFrameRoot);
+    threeFrameRoot = null;
+    threeModelProductId = product.id;
+
+    const spec = THREE_FRAME_SPECS[product.id] || THREE_FRAME_SPECS[1];
+    const root = new THREE.Group();
+    root.visible = false;
+    root.userData.frontWidth = spec.totalWidth;
+
+    const gap = spec.gap;
+    const lensWidth = (spec.totalWidth - gap) / 2;
+    const lensHeight = spec.lensHeight;
+    const leftCenter = -(gap / 2 + lensWidth / 2);
+    const rightCenter = gap / 2 + lensWidth / 2;
+    const outerX = spec.totalWidth / 2 - spec.rim * .25;
+
+    const frameMaterial = new THREE.MeshStandardMaterial({
+      color: spec.frameColor,
+      metalness: spec.material === "metal" ? .72 : .12,
+      roughness: spec.material === "metal" ? .20 : .30,
+      transparent: spec.material === "transparent",
+      opacity: spec.material === "transparent" ? .91 : 1
+    });
+
+    const lensMaterial = new THREE.MeshPhysicalMaterial({
+      color: spec.lensColor,
+      transparent: true,
+      opacity: spec.lensOpacity,
+      roughness: .10,
+      metalness: .04,
+      clearcoat: 1,
+      clearcoatRoughness: .08,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+
+    [-1, 1].forEach(side => {
+      const centerX = side < 0 ? leftCenter : rightCenter;
+
+      const rim = new THREE.Mesh(
+        makeRimGeometry(spec, side, lensWidth, lensHeight),
+        frameMaterial
+      );
+      rim.position.x = centerX;
+      root.add(rim);
+
+      const lens = new THREE.Mesh(
+        makeLensGeometry(spec, side, lensWidth, lensHeight),
+        lensMaterial
+      );
+      lens.position.set(centerX, 0, .052);
+      root.add(lens);
+
+      const hingeMaterial = new THREE.MeshStandardMaterial({
+        color: spec.accentColor,
+        metalness: .72,
+        roughness: .20
+      });
+      const hinge = new THREE.Mesh(
+        new THREE.BoxGeometry(spec.rim * 1.42, spec.rim * .76, .105),
+        hingeMaterial
+      );
+      hinge.position.set(
+        side * (spec.totalWidth / 2 - spec.rim * .18),
+        lensHeight * .07,
+        -.005
+      );
+      root.add(hinge);
+    });
+
+    const bridgeMaterial = new THREE.MeshStandardMaterial({
+      color: spec.bridge === "standard" && spec.material !== "metal"
+        ? spec.frameColor
+        : spec.accentColor,
+      metalness: spec.material === "metal" || spec.bridge === "double" ? .72 : .12,
+      roughness: spec.material === "metal" ? .20 : .30
+    });
+
+    const leftInner = leftCenter + lensWidth / 2 - spec.rim * .20;
+    const rightInner = rightCenter - lensWidth / 2 + spec.rim * .20;
+
+    let bridgePoints;
+    if (spec.bridge === "keyhole") {
+      bridgePoints = [
+        [leftInner, lensHeight * .11, .01],
+        [-gap * .34, lensHeight * .20, .018],
+        [0, lensHeight * .13, .025],
+        [gap * .34, lensHeight * .20, .018],
+        [rightInner, lensHeight * .11, .01]
+      ];
+    } else {
+      bridgePoints = [
+        [leftInner, lensHeight * .12, .01],
+        [-gap * .34, lensHeight * .17, .018],
+        [0, lensHeight * .17, .024],
+        [gap * .34, lensHeight * .17, .018],
+        [rightInner, lensHeight * .12, .01]
+      ];
+    }
+
+    root.add(makeTube(
+      bridgePoints,
+      spec.material === "metal" ? .022 : spec.rim * .42,
+      bridgeMaterial,
+      24
+    ));
+
+    if (spec.bridge === "double") {
+      root.add(makeTube([
+        [leftCenter + lensWidth * .28, lensHeight * .39, .005],
+        [-gap * .28, lensHeight * .49, .015],
+        [0, lensHeight * .51, .020],
+        [gap * .28, lensHeight * .49, .015],
+        [rightCenter - lensWidth * .28, lensHeight * .39, .005]
+      ], .018, bridgeMaterial, 24));
+    }
+
+    if (spec.material === "metal") {
+      const padMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xf1e2c8,
+        transparent: true,
+        opacity: .62,
+        roughness: .25
+      });
+
+      [-1, 1].forEach(side => {
+        const pad = new THREE.Mesh(
+          new THREE.SphereGeometry(.047, 14, 10),
+          padMaterial
+        );
+        pad.scale.set(.62, 1, .32);
+        pad.position.set(side * gap * .33, -lensHeight * .10, .055);
+        root.add(pad);
+      });
+    }
+
+    addThreeTemples(root, spec, outerX, lensHeight);
+
+    threeFrameRoot = root;
+    threeScene.add(root);
+  }
+
+  function beginThreeFrame(width, height) {
+    if (!threeReady || !threeRenderer) return;
+    resizeThreeRenderer(width, height);
+    if (threeFrameRoot) threeFrameRoot.visible = false;
+    threeRenderer.clear();
+  }
+
+  function updateThreeFrame(target) {
+    if (!threeReady || !threeFrameRoot || !target) return;
+
+    const widthScale = target.width / Math.max(.01, threeFrameRoot.userData.frontWidth);
+    const yaw = clamp(target.yaw || 0, -1, 1);
+    const angle = normalizeTiltAngle(target.angle || 0);
+    const vertical = Number(offsetControl.value);
+
+    threeFrameRoot.visible = true;
+    threeFrameRoot.scale.setScalar(widthScale);
+    threeFrameRoot.position.set(
+      target.cx - threeStageWidth / 2 + yaw * target.width * .035,
+      threeStageHeight / 2 - target.cy - vertical,
+      0
+    );
+    threeFrameRoot.rotation.set(
+      0,
+      -yaw * .72,
+      -angle
+    );
+
+    const templeGroups = threeFrameRoot.userData.templeGroups || [];
+    templeGroups.forEach(templeGroup => {
+      const side = templeGroup.userData.side;
+      const nearSide = yaw >= 0 ? 1 : -1;
+      const near = side === nearSide;
+      templeGroup.traverse(child => {
+        if (!child.material) return;
+        child.material.transparent = true;
+        child.material.opacity = near
+          ? .72 + Math.abs(yaw) * .28
+          : .18 + Math.abs(yaw) * .18;
+      });
+    });
+  }
+
+  function renderThreeScene() {
+    if (!threeReady || !threeRenderer || !threeScene || !threeCamera) return;
+    threeRenderer.render(threeScene, threeCamera);
+  }
+
   function setLoading(title, text, isError = false) {
     loading.hidden = false;
     loadingTitle.textContent = title;
@@ -2775,6 +3318,7 @@ window.addEventListener("pageshow", function () {
       button.setAttribute("aria-pressed", String(Number(button.dataset.productId) === product.id));
     });
     smooth = null;
+    if (threeReady) rebuildThreeProduct(product);
   }
 
   function buildCarousel() {
@@ -3019,6 +3563,7 @@ window.addEventListener("pageshow", function () {
       canvas.style.height = `${height}px`;
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (threeReady) resizeThreeRenderer(width, height);
     return { width, height, dpr };
   }
 
@@ -3482,8 +4027,13 @@ window.addEventListener("pageshow", function () {
 
 
 
+
   function drawGlasses(target) {
-    drawFree3DFrame(target);
+    if (threeReady && threeFrameRoot) {
+      updateThreeFrame(target);
+    } else {
+      drawFree3DFrame(target);
+    }
   }
 
 
@@ -3564,6 +4114,7 @@ window.addEventListener("pageshow", function () {
     if (!active) return;
     const { width, height } = resizeCanvas();
     ctx.clearRect(0, 0, width, height);
+    beginThreeFrame(width, height);
     const now = performance.now();
     let drawnThisFrame = false;
 
@@ -3582,7 +4133,7 @@ window.addEventListener("pageshow", function () {
             drawnThisFrame = true;
             setStatus("AI locked · Move naturally", true);
             hint.textContent = Math.abs(fit.yaw) > .35
-              ? "Turn left or right to inspect the 3D side arms."
+              ? "Turn left or right to inspect the real 3D temples."
               : "Perfect. Move your head and the frame will follow more smoothly.";
           }
         }
@@ -3600,7 +4151,7 @@ window.addEventListener("pageshow", function () {
         drawnThisFrame = true;
         setStatus("AI locked · Smooth tracking", true);
         hint.textContent = Math.abs(fit.yaw) > .35
-          ? "Turn left or right to inspect the 3D side arms."
+          ? "Turn left or right to inspect the real 3D temples."
           : "Perfect. Move naturally to check the fit.";
       }
     }
@@ -3634,6 +4185,7 @@ window.addEventListener("pageshow", function () {
       smooth = null;
     }
 
+    renderThreeScene();
     animationId = requestAnimationFrame(renderLoop);
   }
 
@@ -3649,6 +4201,13 @@ window.addEventListener("pageshow", function () {
     setEngineChip("CAMERA", "loading");
     setCameraLiveLoading(false);
     setLoading("Starting your camera…", "Your live video stays on this device.");
+
+    let threeStartupError = null;
+    const threeStartup = ensureThreeRenderer().catch(error => {
+      threeStartupError = error;
+      console.error("Three.js startup error:", error);
+      return null;
+    });
 
     try {
       await startCamera();
@@ -3667,6 +4226,16 @@ window.addEventListener("pageshow", function () {
     }
 
     if (token !== startupToken || !active) return;
+
+    await threeStartup;
+    if (threeStartupError) {
+      showEngineNotice(
+        "3D engine fallback active",
+        "The Three.js WebGL engine could not load. A basic fallback is being used. Refresh on a stronger connection to retry."
+      );
+    } else {
+      rebuildThreeProduct(currentProduct);
+    }
 
     hideLoading();
     engineType = "loading";
@@ -3689,7 +4258,7 @@ window.addEventListener("pageshow", function () {
       setStatus("AI ready · Finding face…", false);
       autoFitBtn.classList.add("active");
       autoFitBtn.disabled = false;
-      hint.textContent = "Look straight ahead. The free 3D frame will appear once tracking locks on your face.";
+      hint.textContent = "Look straight ahead. The Three.js frame will appear once tracking locks on your face.";
     } catch (aiError) {
       if (token !== startupToken || !active) return;
       console.error("All AI tracking engines failed:", aiError);
@@ -3733,6 +4302,11 @@ window.addEventListener("pageshow", function () {
     cancelAnimationFrame(animationId);
     stopCamera();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (threeFrameRoot) threeFrameRoot.visible = false;
+    if (threeRenderer && threeScene && threeCamera) {
+      threeRenderer.clear();
+      threeRenderer.render(threeScene, threeCamera);
+    }
     modal.classList.remove("open");
     modal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("no-scroll");
@@ -3778,6 +4352,13 @@ window.addEventListener("pageshow", function () {
     outputCtx.scale(pixelRatio, pixelRatio);
     drawVideoCover(outputCtx, width, height);
     outputCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, width, height);
+    if (threeReady && threeCanvas.width && threeCanvas.height) {
+      outputCtx.drawImage(
+        threeCanvas,
+        0, 0, threeCanvas.width, threeCanvas.height,
+        0, 0, width, height
+      );
+    }
 
     const gradient = outputCtx.createLinearGradient(0, height - 96, 0, height);
     gradient.addColorStop(0, "rgba(0,0,0,0)");
